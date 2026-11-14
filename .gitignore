@@ -1,0 +1,19 @@
+# game data and everything derived from it stays out of the repo
+game/
+gamedata/
+re/*
+!re/winspec/
+!re/robotcty/
+re/robotcty/*
+!re/robotcty/functions.tsv
+shots/
+build/
+*.exe
+*.log
+*.ini
+src/gen/
+installer/*.exe
+graphify-out/
+__pycache__/
+*.bin
+old_ring_rt/
