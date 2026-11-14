@@ -116,6 +116,69 @@ void wave_poll(void)
 u32 w16_waveOutPrepareHeader(u16 h, u32 hdr, u16 size) { (void)h; (void)size; u32 a = FAR2LIN(hdr); WR32(a + 16, RD32(a + 16) | 2); return 0; }
 u32 w16_waveOutUnprepareHeader(u16 h, u32 hdr, u16 size) { (void)h; (void)size; u32 a = FAR2LIN(hdr); WR32(a + 16, RD32(a + 16) & ~2u); return 0; }
 
+/* ---- a looping buffer (WHDR_BEGINLOOP | WHDR_ENDLOOP, many loops): the HMI
+   sound library mixes into it ahead of the play position, like a DMA ring.
+   A host thread streams it in small blocks straight from guest memory; the
+   position the game sees is the stream's read cursor. ---- */
+#define LBLK 1024
+#define LNB 4
+static volatile int loop_on;
+static u32 loop_hdr, loop_lin, loop_len;
+static volatile LONG loop_pos;        /* bytes taken from the ring (wraps at 2^32) */
+static u32 loop_t0;
+static HANDLE loop_thread, loop_ev;
+static HWAVEOUT loop_hwo;
+
+static DWORD WINAPI loop_main(void *arg)
+{
+    (void)arg;
+    WAVEHDR h[LNB];
+    static u8 buf[LNB][LBLK];
+    memset(h, 0, sizeof h);
+    u32 cur = 0;
+    for (int i = 0; i < LNB; i++) {
+        h[i].lpData = (LPSTR)buf[i];
+        h[i].dwBufferLength = LBLK;
+        waveOutPrepareHeader(loop_hwo, &h[i], sizeof h[i]);
+        h[i].dwFlags |= WHDR_DONE;
+    }
+    while (loop_on) {
+        for (int i = 0; i < LNB && loop_on; i++) {
+            if (!(h[i].dwFlags & WHDR_DONE)) continue;
+            for (u32 k = 0; k < LBLK; ) {
+                u32 n = loop_len - cur;
+                if (n > LBLK - k) n = LBLK - k;
+                memcpy(buf[i] + k, MEM + loop_lin + cur, n);
+                k += n;
+                cur = (cur + n) % loop_len;
+            }
+            h[i].dwFlags &= ~WHDR_DONE;
+            waveOutWrite(loop_hwo, &h[i], sizeof h[i]);
+            InterlockedExchangeAdd(&loop_pos, LBLK);
+        }
+        WaitForSingleObject(loop_ev, 20);
+    }
+    waveOutReset(loop_hwo);
+    for (int i = 0; i < LNB; i++) waveOutUnprepareHeader(loop_hwo, &h[i], sizeof h[i]);
+    return 0;
+}
+
+static void loop_stop(void)
+{
+    if (!loop_hdr) return;
+    loop_on = 0;
+    if (loop_thread) { SetEvent(loop_ev); WaitForSingleObject(loop_thread, 2000); CloseHandle(loop_thread); loop_thread = NULL; }
+    u32 a = FAR2LIN(loop_hdr);
+    WR32(a + 16, (RD32(a + 16) & ~0x10u) | 1u);
+    loop_hdr = 0;
+}
+
+static u32 loop_position(void)
+{
+    if (mute) return (u32)((u64)(timeGetTime() - loop_t0) * avg_bps / 1000);
+    return (u32)loop_pos;
+}
+
 static u32 seq;
 u32 w16_waveOutWrite(u16 h, u32 hdr, u16 size)
 {
@@ -123,6 +186,24 @@ u32 w16_waveOutWrite(u16 h, u32 hdr, u16 size)
     if (!open_) return 5;
     u32 a = FAR2LIN(hdr);
     u32 len = RD32(a + 4);
+    if ((RD32(a + 16) & 0x0c) == 0x0c && RD32(a + 20) > 1 && len >= LBLK) {
+        loop_stop();
+        loop_hdr = hdr;
+        loop_lin = FAR2LIN(RD32(a));
+        loop_len = len;
+        loop_pos = 0;
+        loop_t0 = timeGetTime();
+        WR32(a + 16, (RD32(a + 16) & ~1u) | 0x10);
+        rt_log("waveOut: looping ring buffer %u bytes, %u loops\n", len, RD32(a + 20));
+        if (!mute) {
+            loop_on = 1;
+            loop_hwo = hwo;
+            if (!loop_ev) loop_ev = CreateEventA(NULL, FALSE, FALSE, NULL);
+            loop_thread = CreateThread(NULL, 0, loop_main, NULL, 0, NULL);
+            SetThreadPriority(loop_thread, THREAD_PRIORITY_TIME_CRITICAL);
+        }
+        return 0;
+    }
     int i;
     for (i = 0; i < NP; i++) if (!pend[i].used) break;
     if (i == NP) { rt_log("waveOutWrite: too many buffers\n"); return 1; }
@@ -153,6 +234,7 @@ u32 w16_waveOutReset(u16 h)
 {
     (void)h;
     if (!open_) return 0;
+    loop_stop();
     if (!mute) waveOutReset(hwo);
     for (int i = 0; i < NP; i++) if (pend[i].used) { pend[i].h.dwFlags |= WHDR_DONE; pend[i].done_at = 0; }
     mute_clock = 0;
@@ -177,7 +259,8 @@ u32 w16_waveOutGetPosition(u16 h, u32 mmt, u16 size)
     (void)h; (void)size;
     u32 a = FAR2LIN(mmt);
     u32 bytes;
-    if (mute) {
+    if (loop_hdr) bytes = loop_position();
+    else if (mute) {
         bytes = bytes_done;
         /* plus the part of the playing buffer */
         u32 t = timeGetTime();

@@ -102,9 +102,18 @@ static void script_init(void)
     if (getenv(ENV("QUIT"))) quit_at = (u32)atoi(getenv(ENV("QUIT")));
 }
 
+static void save_shot(u32 t);
+static int have_frame;
 static void script_poll(void)
 {
     u32 t = win_time();
+    {   /* RC_TRACEFROM=ms: API trace from that time on */
+        static int tf = -2;
+        extern int api_log_on;
+        if (tf == -2) tf = getenv(ENV("TRACEFROM")) ? atoi(getenv(ENV("TRACEFROM"))) : -1;
+        if (tf >= 0 && t >= (u32)tf) { api_log_on = 1; tf = -1; }
+    }
+    while (have_frame && shot_next < nshots && t >= shots[shot_next]) { save_shot(shots[shot_next]); shot_next++; }
     while (script_next < nscript && t >= script[script_next].t) {
         Script *e = &script[script_next++];
         if (e->kind == 0) {
@@ -128,7 +137,6 @@ static void script_poll(void)
 }
 
 static u32 *frame;
-static int have_frame;
 static int frames;
 
 static void paint_gdi(HDC dc)
@@ -144,6 +152,18 @@ static void paint_gdi(HDC dc)
 
 static void save_shot(u32 t)
 {
+    {
+        int nz = 0; u32 ps = 0;
+        for (int i = 0; i < 640 * 480; i++) nz += screen8[i] != 0;
+        for (int i = 0; i < 256; i++) ps += (screen_pal[i] & 0xff) + ((screen_pal[i] >> 8) & 0xff) + ((screen_pal[i] >> 16) & 0xff);
+        rt_log("shot %u: screen8 nonzero %d, palette sum %u\n", t, nz, ps);
+        if (getenv(ENV("DUMPSCREEN"))) {
+            char rp[760];
+            snprintf(rp, sizeof rp, "%s\\shots\\screen_%06u.raw", rt_exe_dir, t);
+            FILE *f = fopen(rp, "wb");
+            if (f) { fwrite(screen8, 1, 640 * 480, f); fwrite(screen_pal, 4, 256, f); fclose(f); }
+        }
+    }
     char dir[700], p[760];
     snprintf(dir, sizeof dir, "%s\\shots", rt_exe_dir);
     CreateDirectoryA(dir, NULL);
@@ -177,7 +197,6 @@ void present_frame(const u8 *pix, int pitch, const u32 *pal)
     have_frame = 1;
     frames++;
     u32 t = win_time();
-    while (shot_next < nshots && t >= shots[shot_next]) { save_shot(shots[shot_next]); shot_next++; }
     if (hwnd && !hidden && !IsIconic(hwnd)) {
         if (!(d3d_ok && present_rgb(frame, 640, 480))) {
             HDC dc = GetDC(hwnd);
@@ -394,6 +413,7 @@ u32 w16_GetCursorPos(u32 pt)
     win_pump(0);
     u32 a = FAR2LIN(pt);
     WR16(a, gx); WR16(a + 2, gy);
+    { extern int api_log_on; if (api_log_on) rt_log("  cursor %d,%d\n", gx, gy); }
     return 1;
 }
 u32 w16_ScreenToClient(u16 h, u32 pt) { (void)h; (void)pt; return 0; }

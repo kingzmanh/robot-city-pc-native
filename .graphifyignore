@@ -6,3 +6,4 @@ src/gen/
 shots/
 *.exe
 *.bin
+old_ring_rt/
