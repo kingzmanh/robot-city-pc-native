@@ -43,6 +43,7 @@ typedef struct {
 static GObj obj[NOBJ];
 static u16 win_dc;
 static u16 stock[20];
+static u16 stock_bmp;     /* the 1x1 bitmap a new memory DC holds */
 
 static u16 new_obj(int kind)
 {
@@ -90,6 +91,12 @@ static void init_stock(void)
     for (int i = 0; i < 256; i++) screen_pal[i] = p->pe[i][0] | (p->pe[i][1] << 8) | (p->pe[i][2] << 16);
     stock[16] = new_obj(O_FONT); O(stock[16])->stock = 1;
     stock[17] = new_obj(O_FONT); O(stock[17])->stock = 1;
+    stock_bmp = new_obj(O_BMP);
+    O(stock_bmp)->stock = 1;
+    O(stock_bmp)->w = O(stock_bmp)->h = 1;
+    O(stock_bmp)->stride = 4;
+    O(stock_bmp)->topdown = 1;
+    O(stock_bmp)->host = calloc(4, 1);
 }
 
 u16 gdi_window_dc(void)
@@ -228,6 +235,7 @@ u32 w16_CreateCompatibleDC(u16 dc)
     init_stock();
     u16 h = new_obj(O_DC);
     O(h)->pal = stock[15];
+    O(h)->bmp = stock_bmp;
     O(h)->brush = stock[0];
     O(h)->pen = stock[7];
     return h;
@@ -264,7 +272,7 @@ u32 w16_SelectObject(u16 dc, u16 h)
     case O_RGN: return 2;   /* SIMPLEREGION */
     default: return stock[13];
     }
-    return old ? old : (o->kind == O_BMP ? 0 : stock[0]);
+    return old ? old : (o->kind == O_BMP ? stock_bmp : stock[0]);
 }
 
 u32 w16_DeleteObject(u16 h)
@@ -461,4 +469,19 @@ u32 w16_WinGStretchBlt(u16 dd, u16 xd, u16 yd, u16 wd, u16 hd, u16 sd, u16 xs, u
 {
     blit(dd, (s16)xd, (s16)yd, (s16)wd, (s16)hd, sd, (s16)xs, (s16)ys, (s16)ws, (s16)hs, 0xcc0020);
     return 1;
+}
+
+/* RC_DUMPSCREEN test switch: every 8-bit bitmap -> shots\bmp_<t>_<handle>_<w>x<h>.raw */
+void gdi_dump(const char *dir, u32 t)
+{
+    for (int i = 1; i < NOBJ; i++) {
+        GObj *o = &obj[i];
+        if (o->kind != O_BMP || o->stock) continue;
+        char p[800];
+        snprintf(p, sizeof p, "%s\\bmp_%06u_%04x_%dx%d_%s.raw", dir, t, HBASE + i * 4, o->stride, o->h, o->topdown ? "td" : "bu");
+        FILE *f = fopen(p, "wb");
+        if (!f) continue;
+        fwrite(o->host ? o->host : (u8 *)PTR(o->lin), 1, (size_t)o->stride * o->h, f);
+        fclose(f);
+    }
 }

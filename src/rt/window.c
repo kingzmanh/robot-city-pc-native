@@ -95,6 +95,13 @@ static void script_init(void)
         sscanf(s, "%u:%u", &e->t, &e->vk);
         s = strchr(s, ';'); if (s) s++;
     }
+    s = getenv(ENV("MOVE"));    /* RC_MOVE="x,y,ms;..." mouse moves (no button) */
+    while (s && *s && nscript < 256) {
+        Script *e = &script[nscript++];
+        e->kind = 3;
+        sscanf(s, "%d,%d,%u", &e->x, &e->y, &e->t);
+        s = strchr(s, ';'); if (s) s++;
+    }
     /* time order */
     for (int i = 0; i < nscript; i++)
         for (int j = i + 1; j < nscript; j++)
@@ -123,6 +130,9 @@ static void script_poll(void)
             msgq_post(GHWND, WM_LBUTTONDOWN, MK_LBUTTON, lp);
             msgq_post(GHWND, WM_LBUTTONUP, 0, lp);
             rt_log("script click %d,%d at %u\n", e->x, e->y, t);
+        } else if (e->kind == 3) {
+            gx = e->x; gy = e->y;
+            msgq_post(GHWND, WM_MOUSEMOVE, 0, (u32)(u16)e->x | ((u32)(u16)e->y << 16));
         } else {
             msgq_post(GHWND, WM_KEYDOWN, e->vk, 1);
             msgq_post(GHWND, WM_KEYUP, e->vk, 0xc0000001u);
@@ -162,6 +172,10 @@ static void save_shot(u32 t)
             snprintf(rp, sizeof rp, "%s\\shots\\screen_%06u.raw", rt_exe_dir, t);
             FILE *f = fopen(rp, "wb");
             if (f) { fwrite(screen8, 1, 640 * 480, f); fwrite(screen_pal, 4, 256, f); fclose(f); }
+            void gdi_dump(const char *dir, u32 t);
+            char dd[700];
+            snprintf(dd, sizeof dd, "%s\\shots", rt_exe_dir);
+            gdi_dump(dd, t);
         }
     }
     char dir[700], p[760];
