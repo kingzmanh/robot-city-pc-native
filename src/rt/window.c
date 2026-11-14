@@ -158,14 +158,103 @@ extern int opt_zoom;
 #define ZH 384
 static u32 *zframe;
 
-/* the picture shown: the whole screen or the zoomed game area */
+/* Video > Widescreen fill: the 4:3 picture stays sharp in the middle; the
+   sides show the same picture zoomed, blurred and darkened (no stretching) */
+extern int opt_widefill, opt_aspect;
+static u32 *wframe;
+static int last_ext, last_bw;      /* side columns added, base picture width (mouse) */
+
+static int wide_ext(int bw, int bh)
+{
+    if (!opt_widefill || opt_aspect == 1 || !hwnd) return 0;
+    RECT r;
+    GetClientRect(hwnd, &r);
+    if (r.right <= 0 || r.bottom <= 0) return 0;
+    double a = (double)r.right / r.bottom;
+    if (a > 21.0 / 9.0) a = 21.0 / 9.0;
+    int e = (int)((a * bh - bw) / 2.0 + 0.5);
+    return e >= 4 ? e : 0;
+}
+
+static const u32 *widen(const u32 *p, int *w, int h)
+{
+    int bw = *w, e = wide_ext(bw, h);
+    last_ext = e; last_bw = bw;
+    if (!e) return p;
+    int W = bw + 2 * e;
+    static int cap;
+    if (W * h > cap) { free(wframe); cap = W * h; wframe = malloc((size_t)cap * 4); }
+    /* the picture averaged down to 32 x 24 cells */
+    enum { SW = 32, SH = 24 };
+    float sm[SH][SW][3];
+    for (int cy = 0; cy < SH; cy++)
+        for (int cx = 0; cx < SW; cx++) {
+            int x0 = cx * bw / SW, x1 = (cx + 1) * bw / SW, y0 = cy * h / SH, y1 = (cy + 1) * h / SH;
+            u32 r = 0, g = 0, b = 0, n = 0;
+            for (int y = y0; y < y1; y += 2)
+                for (int x = x0; x < x1; x += 2) { u32 c = p[y * bw + x]; r += (c >> 16) & 255; g += (c >> 8) & 255; b += c & 255; n++; }
+            if (!n) n = 1;
+            sm[cy][cx][0] = (float)r / n; sm[cy][cx][1] = (float)g / n; sm[cy][cx][2] = (float)b / n;
+        }
+    /* two 3x3 box blur passes over the cells: no stripes from small details */
+    for (int pass = 0; pass < 2; pass++) {
+        static float t[SH][SW][3];
+        for (int cy = 0; cy < SH; cy++)
+            for (int cx = 0; cx < SW; cx++)
+                for (int ch = 0; ch < 3; ch++) {
+                    float sum = 0;
+                    int n = 0;
+                    for (int dy = -1; dy <= 1; dy++)
+                        for (int dx = -1; dx <= 1; dx++) {
+                            int yy = cy + dy, xx = cx + dx;
+                            if (yy < 0 || yy >= SH || xx < 0 || xx >= SW) continue;
+                            sum += sm[yy][xx][ch];
+                            n++;
+                        }
+                    t[cy][cx][ch] = sum / n;
+                }
+        memcpy(sm, t, sizeof sm);
+    }
+    /* sides: the picture zoomed to cover the wide frame, sampled smoothly, darkened */
+    double z = (double)W / bw;
+    for (int y = 0; y < h; y++) {
+        u32 *row = wframe + (size_t)y * W;
+        memcpy(row + e, p + (size_t)y * bw, (size_t)bw * 4);
+        double v = ((y - h / 2.0) / z + h / 2.0) / h * SH - 0.5;
+        if (v < 0) v = 0; if (v > SH - 1) v = SH - 1;
+        int v0 = (int)v, v1 = v0 + 1 < SH ? v0 + 1 : v0;
+        float fv = (float)(v - v0);
+        for (int x = 0; x < W; x++) {
+            if (x == e) { x = e + bw - 1; continue; }
+            double u = ((x - W / 2.0) / z + bw / 2.0) / bw * SW - 0.5;
+            if (u < 0) u = 0; if (u > SW - 1) u = SW - 1;
+            int u0 = (int)u, u1 = u0 + 1 < SW ? u0 + 1 : u0;
+            float fu = (float)(u - u0);
+            /* darker towards the outer edges */
+            float d = x < e ? (float)x / e : (float)(W - 1 - x) / e;
+            float k = 0.25f + 0.25f * d;
+            u32 c = 0;
+            for (int ch = 0; ch < 3; ch++) {
+                float a = sm[v0][u0][ch] * (1 - fu) + sm[v0][u1][ch] * fu;
+                float b2 = sm[v1][u0][ch] * (1 - fu) + sm[v1][u1][ch] * fu;
+                int val = (int)((a * (1 - fv) + b2 * fv) * k);
+                c |= (u32)(val > 255 ? 255 : val) << (16 - 8 * ch);
+            }
+            row[x] = c;
+        }
+    }
+    *w = W;
+    return wframe;
+}
+
+/* the picture shown: the whole screen or the zoomed game area (+ wide sides) */
 static const u32 *shown(int *w, int *h)
 {
-    if (!opt_zoom) { *w = 640; *h = 480; return frame; }
+    if (!opt_zoom) { *w = 640; *h = 480; return widen(frame, w, 480); }
     if (!zframe) zframe = calloc(ZW * ZH, 4);
     for (int y = 0; y < ZH; y++) memcpy(zframe + y * ZW, frame + (ZY + y) * 640 + ZX, ZW * 4);
     *w = ZW; *h = ZH;
-    return zframe;
+    return widen(zframe, w, ZH);
 }
 
 static int present_cur(void)
@@ -269,6 +358,14 @@ static int map_mouse(LPARAM lp)
     present_dest_rect(r.right, r.bottom, &x, &y, &w, &h);
     int mx = (short)LOWORD(lp), my = (short)HIWORD(lp);
     int ox, oy;
+    /* the wide sides are not part of the game: map onto the picture in the middle */
+    if (last_ext && last_bw) {
+        int W = last_bw + 2 * last_ext;
+        int px = (mx - x) * W / (w ? w : 1) - last_ext;
+        x = x + last_ext * w / W;
+        w = last_bw * w / W;
+        mx = x + px * w / last_bw;
+    }
     if (opt_zoom) {
         ox = ZX + (mx - x) * ZW / (w ? w : 1);
         oy = ZY + (my - y) * ZH / (h ? h : 1);

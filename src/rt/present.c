@@ -19,6 +19,8 @@ int opt_fullscreen = 1, opt_filter = 5, opt_sharpen = 1, opt_fxaa = 0, opt_aspec
 /* Robot City draws only into a 512x384 box (64,48) of its 640x480 screen, framed by
    a white line on black: 1 = show just that box, filling the screen (default) */
 int opt_zoom = 1;
+/* widescreen screens: blurred, darkened copy of the picture at the sides (1, default) or black bars */
+int opt_widefill = 1;
 /* Resolution: 0 = upscale straight to the window; 1-4 = upscale to N x
    640x480 first (the filter works at a whole multiple), then fit that
    picture to the window.  The game's art is 640x480: no extra detail. */
@@ -561,6 +563,8 @@ void settings_load(void)
     opt_showfps = ini_int("video", "ShowFPS", 0, 0, 1);
     opt_zoom = ini_int("video", "ZoomGameArea", 1, 0, 1);
     if (getenv(ENV("ZOOM"))) opt_zoom = atoi(getenv(ENV("ZOOM")));
+    opt_widefill = ini_int("video", "WidescreenFill", 1, 0, 1);
+    if (getenv(ENV("WIDEFILL"))) opt_widefill = atoi(getenv(ENV("WIDEFILL")));
     opt_scale = ini_int("video", "Resolution", 0, 0, 4);
     opt_moviecolor = ini_int("video", "MovieColor", 1, 0, 1);
     opt_moviedeblock = ini_int("video", "MovieDeblock", 1, 0, 1);
@@ -604,6 +608,7 @@ static void settings_save(void)
     put("Aspect", opt_aspect);
     put("ShowFPS", opt_showfps);
     put("ZoomGameArea", opt_zoom);
+    put("WidescreenFill", opt_widefill);
     put("Resolution", opt_scale);
     put("MovieColor", opt_moviecolor);
     put("MovieDeblock", opt_moviedeblock);
@@ -618,7 +623,7 @@ static void settings_save(void)
 
 /* ---------------- menu bar ---------------- */
 enum { ID_FILTER = 1000, ID_SHARP = 1010, ID_FXAA = 1020, ID_ASPECT = 1030, ID_WIN = 1040, ID_FULLSCREEN = 1050,
-       ID_SHOWFPS = 1051, ID_CONTROLS = 1060, ID_ABOUT = 1061, ID_SCALE = 1070, ID_MOVIECOLOR = 1080, ID_RENDER = 1090, ID_MOVIEFULL = 1081, ID_MOVIEDEBLOCK = 1082, ID_MOVIEDEBAND = 1083, ID_WIDE = 1100, ID_MOVIEFILLWIDE = 1084, ID_ZOOM = 1110 };
+       ID_SHOWFPS = 1051, ID_CONTROLS = 1060, ID_ABOUT = 1061, ID_SCALE = 1070, ID_MOVIECOLOR = 1080, ID_RENDER = 1090, ID_MOVIEFULL = 1081, ID_MOVIEDEBLOCK = 1082, ID_MOVIEDEBAND = 1083, ID_WIDE = 1100, ID_MOVIEFILLWIDE = 1084, ID_ZOOM = 1110, ID_WIDEFILL = 1111 };
 static HMENU g_menu;
 static WINDOWPLACEMENT wpl = { sizeof wpl };
 
@@ -630,6 +635,7 @@ static void update_checks(void)
     CheckMenuRadioItem(g_menu, ID_SCALE, ID_SCALE + 4, ID_SCALE + opt_scale, MF_BYCOMMAND);
     CheckMenuItem(g_menu, ID_FXAA, MF_BYCOMMAND | (opt_fxaa ? MF_CHECKED : MF_UNCHECKED));
     CheckMenuItem(g_menu, ID_ZOOM, MF_BYCOMMAND | (opt_zoom ? MF_CHECKED : MF_UNCHECKED));
+    CheckMenuItem(g_menu, ID_WIDEFILL, MF_BYCOMMAND | (opt_widefill ? MF_CHECKED : MF_UNCHECKED));
     CheckMenuItem(g_menu, ID_MOVIECOLOR, MF_BYCOMMAND | (opt_moviecolor ? MF_CHECKED : MF_UNCHECKED));
     CheckMenuItem(g_menu, ID_MOVIEDEBLOCK, MF_BYCOMMAND | (opt_moviedeblock ? MF_CHECKED : MF_UNCHECKED));
     CheckMenuItem(g_menu, ID_MOVIEDEBAND, MF_BYCOMMAND | (opt_moviedeband ? MF_CHECKED : MF_UNCHECKED));
@@ -687,6 +693,7 @@ static HMENU build_menu(void)
     AppendMenuW(video, MF_POPUP, (UINT_PTR)widem, L"&Widescreen");
 #endif
     AppendMenuW(video, MF_STRING, ID_ZOOM, L"&Zoom to the game area  (fills the screen; off = the original 640x480 screen with its border)");
+    AppendMenuW(video, MF_STRING, ID_WIDEFILL, L"&Widescreen fill  (blurred picture at the sides instead of black bars)");
     AppendMenuW(video, MF_SEPARATOR, 0, NULL);
     AppendMenuW(video, MF_POPUP, (UINT_PTR)res, L"&Resolution");
     AppendMenuW(video, MF_POPUP, (UINT_PTR)asp, L"&Aspect Ratio");
@@ -756,6 +763,7 @@ int present_menu_command(int id)
     else if (id >= ID_ASPECT && id <= ID_ASPECT + 2) opt_aspect = id - ID_ASPECT;
     else if (id == ID_FXAA) opt_fxaa = !opt_fxaa;
     else if (id == ID_ZOOM) { opt_zoom = !opt_zoom; void win_refresh(void); win_refresh(); }
+    else if (id == ID_WIDEFILL) { opt_widefill = !opt_widefill; void win_refresh(void); win_refresh(); }
     else if (id == ID_MOVIECOLOR) opt_moviecolor = !opt_moviecolor;
     else if (id >= ID_WIDE && id <= ID_WIDE + 4) opt_wide = id - ID_WIDE;
     else if (id == ID_MOVIEFILLWIDE) opt_moviefillwide = !opt_moviefillwide;
