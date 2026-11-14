@@ -149,15 +149,48 @@ static void script_poll(void)
 static u32 *frame;
 static int frames;
 
+/* Video > Zoom to the game area: the game draws only into this box of its
+   640x480 screen (a white frame line on black around it) */
+extern int opt_zoom;
+#define ZX 64
+#define ZY 48
+#define ZW 512
+#define ZH 384
+static u32 *zframe;
+
+/* the picture shown: the whole screen or the zoomed game area */
+static const u32 *shown(int *w, int *h)
+{
+    if (!opt_zoom) { *w = 640; *h = 480; return frame; }
+    if (!zframe) zframe = calloc(ZW * ZH, 4);
+    for (int y = 0; y < ZH; y++) memcpy(zframe + y * ZW, frame + (ZY + y) * 640 + ZX, ZW * 4);
+    *w = ZW; *h = ZH;
+    return zframe;
+}
+
+static int present_cur(void)
+{
+    int w, h;
+    const u32 *p = shown(&w, &h);
+    return present_rgb(p, w, h);
+}
+
 static void paint_gdi(HDC dc)
 {
     RECT r;
     GetClientRect(hwnd, &r);
-    int x, y, w, h;
+    int x, y, w, h, sw, sh;
     present_dest_rect(r.right, r.bottom, &x, &y, &w, &h);
-    BITMAPINFOHEADER bmi = { sizeof bmi, 640, -480, 1, 32, BI_RGB, 0, 0, 0, 0, 0 };
+    const u32 *p = shown(&sw, &sh);
+    BITMAPINFOHEADER bmi = { sizeof bmi, sw, -sh, 1, 32, BI_RGB, 0, 0, 0, 0, 0 };
     SetStretchBltMode(dc, COLORONCOLOR);
-    StretchDIBits(dc, x, y, w, h, 0, 0, 640, 480, frame, (BITMAPINFO *)&bmi, DIB_RGB_COLORS, SRCCOPY);
+    StretchDIBits(dc, x, y, w, h, 0, 0, sw, sh, p, (BITMAPINFO *)&bmi, DIB_RGB_COLORS, SRCCOPY);
+}
+
+/* the zoom option changed: show the last picture again */
+void win_refresh(void)
+{
+    if (hwnd && frame) InvalidateRect(hwnd, NULL, FALSE);
 }
 
 static void save_shot(u32 t)
@@ -183,7 +216,7 @@ static void save_shot(u32 t)
     CreateDirectoryA(dir, NULL);
     snprintf(p, sizeof p, "%s\\shot_%06u.bmp", dir, t);
     if (getenv(ENV("SHOTOUT")) && d3d_ok) {
-        present_rgb(frame, 640, 480);
+        present_cur();
         present_shot(p);
         rt_log("shot %s (presented)\n", p);
         return;
@@ -212,7 +245,7 @@ void present_frame(const u8 *pix, int pitch, const u32 *pal)
     frames++;
     u32 t = win_time();
     if (hwnd && !hidden && !IsIconic(hwnd)) {
-        if (!(d3d_ok && present_rgb(frame, 640, 480))) {
+        if (!(d3d_ok && present_cur())) {
             HDC dc = GetDC(hwnd);
             paint_gdi(dc);
             ReleaseDC(hwnd, dc);
@@ -235,7 +268,16 @@ static int map_mouse(LPARAM lp)
     int x, y, w, h;
     present_dest_rect(r.right, r.bottom, &x, &y, &w, &h);
     int mx = (short)LOWORD(lp), my = (short)HIWORD(lp);
-    int ox = (mx - x) * 640 / (w ? w : 1), oy = (my - y) * 480 / (h ? h : 1);
+    int ox, oy;
+    if (opt_zoom) {
+        ox = ZX + (mx - x) * ZW / (w ? w : 1);
+        oy = ZY + (my - y) * ZH / (h ? h : 1);
+        if (ox < ZX) ox = ZX; if (ox > ZX + ZW - 1) ox = ZX + ZW - 1;
+        if (oy < ZY) oy = ZY; if (oy > ZY + ZH - 1) oy = ZY + ZH - 1;
+    } else {
+        ox = (mx - x) * 640 / (w ? w : 1);
+        oy = (my - y) * 480 / (h ? h : 1);
+    }
     if (ox < 0) ox = 0; if (ox > 639) ox = 639;
     if (oy < 0) oy = 0; if (oy > 479) oy = 479;
     gx = ox; gy = oy;
@@ -259,7 +301,7 @@ static LRESULT CALLBACK host_proc(HWND h, UINT m, WPARAM wp, LPARAM lp)
     case WM_PAINT: {
         PAINTSTRUCT ps;
         HDC dc = BeginPaint(h, &ps);
-        if (have_frame && !(d3d_ok && present_rgb(frame, 640, 480))) paint_gdi(dc);
+        if (have_frame && !(d3d_ok && present_cur())) paint_gdi(dc);
         EndPaint(h, &ps);
         return 0;
     }
