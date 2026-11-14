@@ -190,3 +190,4 @@ void rt_rep_stos16(int sz);
 #define REP_STOS16(sz) do { SYNC_OUT; rt_rep_stos16(sz); SYNC_IN; } while (0)
 typedef struct { const char *mod; int ord; const char *name; void (*fn)(void); } ApiEnt;
 void rt_trace_at(u32 at);
+void rt_cursor_steady(u32 sp);

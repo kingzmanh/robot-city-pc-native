@@ -515,6 +515,7 @@ int main(int argc, char **argv)
 void rt_trace_at(u32 at)
 {
     { void rt_trace_event(void); if (at == 0x6d361) rt_trace_event(); }
+    { void rt_probe_cursor(void); if (at == 0x599da) { rt_probe_cursor(); return; } }
     rt_log("@%x:%04x ax=%04x bx=%04x cx=%04x dx=%04x si=%04x di=%04x bp=%04x ds=%04x es=%04x\n", at >> 16, at & 0xffff,
            cpu.r[0] & 0xffff, cpu.r[3] & 0xffff, cpu.r[1] & 0xffff, cpu.r[2] & 0xffff, cpu.r[6] & 0xffff, cpu.r[7] & 0xffff,
            cpu.r[5] & 0xffff, cpu.sreg[S_DS], cpu.sreg[S_ES]);
@@ -526,4 +527,44 @@ void rt_trace_event(void)
     u32 a = FAR2LIN(fp);
     rt_log("   event %04x:%04x type %u id %u  caller ret %04x:%04x\n", fp >> 16, fp & 0xffff, RD16(a + 0x18), RD16(a + 0x1c),
            RD16(STK(4)), RD16(STK(2)));
+}
+
+/* probe: cursor animation step 5:99da(hotspot far ptr) */
+void rt_probe_cursor(void)
+{
+    u32 off = RD16(STK(4)), sel = RD16(STK(6));
+    u32 ds = cpu.sbase[S_DS];
+    u32 k = RD8(ds + 0x2f24);
+    u32 base = sel_base[SEL_IDX(sel)] + off + k;
+    u32 tp = RD32(sel_base[SEL_IDX(sel)] + off + 0x1c);
+    u8 *tb = (u8 *)PTR(FAR2LIN(tp));
+    static int n2;
+    if (n2++ < 3) rt_log("cursor anim table %08x: %u %u %u %u %u %u %u %u\n", tp, tb[0], tb[1], tb[2], tb[3], tb[4], tb[5], tb[6], tb[7]);
+    static int n;
+    if (n++ < 40) rt_log("cursor anim %04x:%04x k=%u count=%u b16=%u loop=%u frame=%u\n", sel, off, k,
+                         RD8(base + 0x15), RD8(base + 0x16), RD8(base + 0x17), RD16(ds + 0x2d44));
+}
+
+/* patch16 at 5:99da (cursor animation step, cdecl far: hotspot far ptr at sp+4):
+   frame 0 of the arrow cursors is empty; with Video > Steady cursor its entry
+   in the hotspot's frame table is cleared so the animation never shows it */
+extern int opt_steadycursor;
+void rt_cursor_steady(u32 sp)
+{
+    if (!opt_steadycursor) return;
+    u32 ss = cpu.sbase[S_SS];
+    u32 hp = RD16(ss + (u16)(sp + 4)) | ((u32)RD16(ss + (u16)(sp + 6)) << 16);
+    if (!hp) return;
+    u32 h = FAR2LIN(hp);
+    u32 k = RD8(sel_base[SEL_IDX(RD16(cpu.sbase[S_DS] + 0x1f76))] + 0x2f24);
+    if (k) return;
+    u32 count = RD8(h + 0x15);
+    u32 tp = RD32(h + 0x1c);
+    if (count < 2 || count == 255 || !tp) return;
+    u32 t = FAR2LIN(tp);
+    if (!RD8(t)) return;
+    /* the arrow cursors' frame 0 is empty; the hand's is a full hand - skipping it
+       there only shortens its animation by one frame */
+    for (u32 i = 1; i < count; i++)
+        if (RD8(t + i)) { WR8(t, 0); return; }   /* another frame stays */
 }

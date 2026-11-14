@@ -2,11 +2,13 @@
 #include "rt.h"
 
 extern int api_log_on;
+u32 rt_api_ret;
 static int stub_n;
 
 u32 __attribute__((weak)) w16_timeGetTime(void) {  if (stub_n++ < 200) rt_log("STUB MMSYSTEM.timeGetTime()\n"); return 0; }
 void api_MMSYSTEM_607(void)
 {
+    rt_api_ret = RD16(STK(0)) | ((u32)RD16(STK(2)) << 16);   /* caller (debugging) */
     if (api_log_on) rt_log("api timeGetTime()\n");
     cpu.r[R_ESP] = (u16)(cpu.r[R_ESP] + 4);
     u32 r = w16_timeGetTime();
@@ -17,6 +19,7 @@ void api_KERNEL_15(void)
 {
     u16 a0 = (u16)RD16(STK(8));
     u32 a1 = (RD16(STK(4)) | ((u32)RD16(STK(6)) << 16));
+    rt_api_ret = RD16(STK(0)) | ((u32)RD16(STK(2)) << 16);   /* caller (debugging) */
     if (api_log_on) rt_log("api GlobalAlloc(%x %x)\n", (u32)a0, (u32)a1);
     cpu.r[R_ESP] = (u16)(cpu.r[R_ESP] + 10);
     u32 r = w16_GlobalAlloc(a0, a1);
@@ -26,6 +29,7 @@ u32 __attribute__((weak)) w16_GlobalFree(u16 a0) { (void)a0; if (stub_n++ < 200)
 void api_KERNEL_17(void)
 {
     u16 a0 = (u16)RD16(STK(4));
+    rt_api_ret = RD16(STK(0)) | ((u32)RD16(STK(2)) << 16);   /* caller (debugging) */
     if (api_log_on) rt_log("api GlobalFree(%x)\n", (u32)a0);
     cpu.r[R_ESP] = (u16)(cpu.r[R_ESP] + 6);
     u32 r = w16_GlobalFree(a0);
@@ -35,6 +39,7 @@ u32 __attribute__((weak)) w16_GlobalLock(u16 a0) { (void)a0; if (stub_n++ < 200)
 void api_KERNEL_18(void)
 {
     u16 a0 = (u16)RD16(STK(4));
+    rt_api_ret = RD16(STK(0)) | ((u32)RD16(STK(2)) << 16);   /* caller (debugging) */
     if (api_log_on) rt_log("api GlobalLock(%x)\n", (u32)a0);
     cpu.r[R_ESP] = (u16)(cpu.r[R_ESP] + 6);
     u32 r = w16_GlobalLock(a0);
@@ -44,6 +49,7 @@ u32 __attribute__((weak)) w16_GlobalUnlock(u16 a0) { (void)a0; if (stub_n++ < 20
 void api_KERNEL_19(void)
 {
     u16 a0 = (u16)RD16(STK(4));
+    rt_api_ret = RD16(STK(0)) | ((u32)RD16(STK(2)) << 16);   /* caller (debugging) */
     if (api_log_on) rt_log("api GlobalUnlock(%x)\n", (u32)a0);
     cpu.r[R_ESP] = (u16)(cpu.r[R_ESP] + 6);
     u32 r = w16_GlobalUnlock(a0);
@@ -52,6 +58,7 @@ void api_KERNEL_19(void)
 u32 __attribute__((weak)) w16_waveOutGetNumDevs(void) {  if (stub_n++ < 200) rt_log("STUB MMSYSTEM.waveOutGetNumDevs()\n"); return 0; }
 void api_MMSYSTEM_401(void)
 {
+    rt_api_ret = RD16(STK(0)) | ((u32)RD16(STK(2)) << 16);   /* caller (debugging) */
     if (api_log_on) rt_log("api waveOutGetNumDevs()\n");
     cpu.r[R_ESP] = (u16)(cpu.r[R_ESP] + 4);
     u32 r = w16_waveOutGetNumDevs();
@@ -66,6 +73,7 @@ void api_MMSYSTEM_404(void)
     u32 a3 = (RD16(STK(12)) | ((u32)RD16(STK(14)) << 16));
     u32 a4 = (RD16(STK(8)) | ((u32)RD16(STK(10)) << 16));
     u32 a5 = (RD16(STK(4)) | ((u32)RD16(STK(6)) << 16));
+    rt_api_ret = RD16(STK(0)) | ((u32)RD16(STK(2)) << 16);   /* caller (debugging) */
     if (api_log_on) rt_log("api waveOutOpen(%x %x %x %x %x %x)\n", (u32)a0, (u32)a1, (u32)a2, (u32)a3, (u32)a4, (u32)a5);
     cpu.r[R_ESP] = (u16)(cpu.r[R_ESP] + 26);
     u32 r = w16_waveOutOpen(a0, a1, a2, a3, a4, a5);
@@ -75,6 +83,7 @@ u32 __attribute__((weak)) w16_waveOutClose(u16 a0) { (void)a0; if (stub_n++ < 20
 void api_MMSYSTEM_405(void)
 {
     u16 a0 = (u16)RD16(STK(4));
+    rt_api_ret = RD16(STK(0)) | ((u32)RD16(STK(2)) << 16);   /* caller (debugging) */
     if (api_log_on) rt_log("api waveOutClose(%x)\n", (u32)a0);
     cpu.r[R_ESP] = (u16)(cpu.r[R_ESP] + 6);
     u32 r = w16_waveOutClose(a0);
@@ -86,6 +95,7 @@ void api_MMSYSTEM_406(void)
     u16 a0 = (u16)RD16(STK(10));
     u32 a1 = (RD16(STK(6)) | ((u32)RD16(STK(8)) << 16));
     u16 a2 = (u16)RD16(STK(4));
+    rt_api_ret = RD16(STK(0)) | ((u32)RD16(STK(2)) << 16);   /* caller (debugging) */
     if (api_log_on) rt_log("api waveOutPrepareHeader(%x %x %x)\n", (u32)a0, (u32)a1, (u32)a2);
     cpu.r[R_ESP] = (u16)(cpu.r[R_ESP] + 12);
     u32 r = w16_waveOutPrepareHeader(a0, a1, a2);
@@ -97,6 +107,7 @@ void api_MMSYSTEM_407(void)
     u16 a0 = (u16)RD16(STK(10));
     u32 a1 = (RD16(STK(6)) | ((u32)RD16(STK(8)) << 16));
     u16 a2 = (u16)RD16(STK(4));
+    rt_api_ret = RD16(STK(0)) | ((u32)RD16(STK(2)) << 16);   /* caller (debugging) */
     if (api_log_on) rt_log("api waveOutUnprepareHeader(%x %x %x)\n", (u32)a0, (u32)a1, (u32)a2);
     cpu.r[R_ESP] = (u16)(cpu.r[R_ESP] + 12);
     u32 r = w16_waveOutUnprepareHeader(a0, a1, a2);
@@ -108,6 +119,7 @@ void api_MMSYSTEM_408(void)
     u16 a0 = (u16)RD16(STK(10));
     u32 a1 = (RD16(STK(6)) | ((u32)RD16(STK(8)) << 16));
     u16 a2 = (u16)RD16(STK(4));
+    rt_api_ret = RD16(STK(0)) | ((u32)RD16(STK(2)) << 16);   /* caller (debugging) */
     if (api_log_on) rt_log("api waveOutWrite(%x %x %x)\n", (u32)a0, (u32)a1, (u32)a2);
     cpu.r[R_ESP] = (u16)(cpu.r[R_ESP] + 12);
     u32 r = w16_waveOutWrite(a0, a1, a2);
@@ -117,6 +129,7 @@ u32 __attribute__((weak)) w16_waveOutReset(u16 a0) { (void)a0; if (stub_n++ < 20
 void api_MMSYSTEM_411(void)
 {
     u16 a0 = (u16)RD16(STK(4));
+    rt_api_ret = RD16(STK(0)) | ((u32)RD16(STK(2)) << 16);   /* caller (debugging) */
     if (api_log_on) rt_log("api waveOutReset(%x)\n", (u32)a0);
     cpu.r[R_ESP] = (u16)(cpu.r[R_ESP] + 6);
     u32 r = w16_waveOutReset(a0);
@@ -128,6 +141,7 @@ void api_MMSYSTEM_412(void)
     u16 a0 = (u16)RD16(STK(10));
     u32 a1 = (RD16(STK(6)) | ((u32)RD16(STK(8)) << 16));
     u16 a2 = (u16)RD16(STK(4));
+    rt_api_ret = RD16(STK(0)) | ((u32)RD16(STK(2)) << 16);   /* caller (debugging) */
     if (api_log_on) rt_log("api waveOutGetPosition(%x %x %x)\n", (u32)a0, (u32)a1, (u32)a2);
     cpu.r[R_ESP] = (u16)(cpu.r[R_ESP] + 12);
     u32 r = w16_waveOutGetPosition(a0, a1, a2);
@@ -138,6 +152,7 @@ void api_MMSYSTEM_416(void)
 {
     u16 a0 = (u16)RD16(STK(8));
     u32 a1 = (RD16(STK(4)) | ((u32)RD16(STK(6)) << 16));
+    rt_api_ret = RD16(STK(0)) | ((u32)RD16(STK(2)) << 16);   /* caller (debugging) */
     if (api_log_on) rt_log("api waveOutSetVolume(%x %x)\n", (u32)a0, (u32)a1);
     cpu.r[R_ESP] = (u16)(cpu.r[R_ESP] + 10);
     u32 r = w16_waveOutSetVolume(a0, a1);
@@ -148,6 +163,7 @@ void api_MMSYSTEM_420(void)
 {
     u16 a0 = (u16)RD16(STK(8));
     u32 a1 = (RD16(STK(4)) | ((u32)RD16(STK(6)) << 16));
+    rt_api_ret = RD16(STK(0)) | ((u32)RD16(STK(2)) << 16);   /* caller (debugging) */
     if (api_log_on) rt_log("api waveOutGetID(%x %x)\n", (u32)a0, (u32)a1);
     cpu.r[R_ESP] = (u16)(cpu.r[R_ESP] + 10);
     u32 r = w16_waveOutGetID(a0, a1);
@@ -157,6 +173,7 @@ u32 __attribute__((weak)) w16_CreatePalette(u32 a0) { (void)a0; if (stub_n++ < 2
 void api_GDI_360(void)
 {
     u32 a0 = (RD16(STK(4)) | ((u32)RD16(STK(6)) << 16));
+    rt_api_ret = RD16(STK(0)) | ((u32)RD16(STK(2)) << 16);   /* caller (debugging) */
     if (api_log_on) rt_log("api CreatePalette(%x)\n", (u32)a0);
     cpu.r[R_ESP] = (u16)(cpu.r[R_ESP] + 8);
     u32 r = w16_CreatePalette(a0);
@@ -169,6 +186,7 @@ void api_GDI_364(void)
     u16 a1 = (u16)RD16(STK(10));
     u16 a2 = (u16)RD16(STK(8));
     u32 a3 = (RD16(STK(4)) | ((u32)RD16(STK(6)) << 16));
+    rt_api_ret = RD16(STK(0)) | ((u32)RD16(STK(2)) << 16);   /* caller (debugging) */
     if (api_log_on) rt_log("api SetPaletteEntries(%x %x %x %x)\n", (u32)a0, (u32)a1, (u32)a2, (u32)a3);
     cpu.r[R_ESP] = (u16)(cpu.r[R_ESP] + 14);
     u32 r = w16_SetPaletteEntries(a0, a1, a2, a3);
@@ -181,6 +199,7 @@ void api_GDI_367(void)
     u16 a1 = (u16)RD16(STK(10));
     u16 a2 = (u16)RD16(STK(8));
     u32 a3 = (RD16(STK(4)) | ((u32)RD16(STK(6)) << 16));
+    rt_api_ret = RD16(STK(0)) | ((u32)RD16(STK(2)) << 16);   /* caller (debugging) */
     if (api_log_on) rt_log("api AnimatePalette(%x %x %x %x)\n", (u32)a0, (u32)a1, (u32)a2, (u32)a3);
     cpu.r[R_ESP] = (u16)(cpu.r[R_ESP] + 14);
     u32 r = w16_AnimatePalette(a0, a1, a2, a3);
@@ -190,6 +209,7 @@ u32 __attribute__((weak)) w16_UpdateWindow(u16 a0) { (void)a0; if (stub_n++ < 20
 void api_USER_124(void)
 {
     u16 a0 = (u16)RD16(STK(4));
+    rt_api_ret = RD16(STK(0)) | ((u32)RD16(STK(2)) << 16);   /* caller (debugging) */
     if (api_log_on) rt_log("api UpdateWindow(%x)\n", (u32)a0);
     cpu.r[R_ESP] = (u16)(cpu.r[R_ESP] + 6);
     u32 r = w16_UpdateWindow(a0);
@@ -201,6 +221,7 @@ void api_USER_125(void)
     u16 a0 = (u16)RD16(STK(10));
     u32 a1 = (RD16(STK(6)) | ((u32)RD16(STK(8)) << 16));
     u16 a2 = (u16)RD16(STK(4));
+    rt_api_ret = RD16(STK(0)) | ((u32)RD16(STK(2)) << 16);   /* caller (debugging) */
     if (api_log_on) rt_log("api InvalidateRect(%x %x %x)\n", (u32)a0, (u32)a1, (u32)a2);
     cpu.r[R_ESP] = (u16)(cpu.r[R_ESP] + 12);
     u32 r = w16_InvalidateRect(a0, a1, a2);
@@ -211,6 +232,7 @@ void api_USER_127(void)
 {
     u16 a0 = (u16)RD16(STK(8));
     u32 a1 = (RD16(STK(4)) | ((u32)RD16(STK(6)) << 16));
+    rt_api_ret = RD16(STK(0)) | ((u32)RD16(STK(2)) << 16);   /* caller (debugging) */
     if (api_log_on) rt_log("api ValidateRect(%x %x)\n", (u32)a0, (u32)a1);
     cpu.r[R_ESP] = (u16)(cpu.r[R_ESP] + 10);
     u32 r = w16_ValidateRect(a0, a1);
@@ -222,6 +244,7 @@ void api_USER_282(void)
     u16 a0 = (u16)RD16(STK(8));
     u16 a1 = (u16)RD16(STK(6));
     u16 a2 = (u16)RD16(STK(4));
+    rt_api_ret = RD16(STK(0)) | ((u32)RD16(STK(2)) << 16);   /* caller (debugging) */
     if (api_log_on) rt_log("api SelectPalette(%x %x %x)\n", (u32)a0, (u32)a1, (u32)a2);
     cpu.r[R_ESP] = (u16)(cpu.r[R_ESP] + 10);
     u32 r = w16_SelectPalette(a0, a1, a2);
@@ -239,6 +262,7 @@ void api_GDI_34(void)
     s16 a6 = (s16)RD16(STK(10));
     s16 a7 = (s16)RD16(STK(8));
     u32 a8 = (RD16(STK(4)) | ((u32)RD16(STK(6)) << 16));
+    rt_api_ret = RD16(STK(0)) | ((u32)RD16(STK(2)) << 16);   /* caller (debugging) */
     if (api_log_on) rt_log("api BitBlt(%x %x %x %x %x %x %x %x %x)\n", (u32)a0, (u32)a1, (u32)a2, (u32)a3, (u32)a4, (u32)a5, (u32)a6, (u32)a7, (u32)a8);
     cpu.r[R_ESP] = (u16)(cpu.r[R_ESP] + 24);
     u32 r = w16_BitBlt(a0, a1, a2, a3, a4, a5, a6, a7, a8);
@@ -248,6 +272,7 @@ u32 __attribute__((weak)) w16_RealizePalette(u16 a0) { (void)a0; if (stub_n++ < 
 void api_USER_283(void)
 {
     u16 a0 = (u16)RD16(STK(4));
+    rt_api_ret = RD16(STK(0)) | ((u32)RD16(STK(2)) << 16);   /* caller (debugging) */
     if (api_log_on) rt_log("api RealizePalette(%x)\n", (u32)a0);
     cpu.r[R_ESP] = (u16)(cpu.r[R_ESP] + 6);
     u32 r = w16_RealizePalette(a0);
@@ -258,6 +283,7 @@ void api_GDI_45(void)
 {
     u16 a0 = (u16)RD16(STK(6));
     u16 a1 = (u16)RD16(STK(4));
+    rt_api_ret = RD16(STK(0)) | ((u32)RD16(STK(2)) << 16);   /* caller (debugging) */
     if (api_log_on) rt_log("api SelectObject(%x %x)\n", (u32)a0, (u32)a1);
     cpu.r[R_ESP] = (u16)(cpu.r[R_ESP] + 8);
     u32 r = w16_SelectObject(a0, a1);
@@ -269,6 +295,7 @@ void api_GDI_51(void)
     u16 a0 = (u16)RD16(STK(8));
     u16 a1 = (u16)RD16(STK(6));
     u16 a2 = (u16)RD16(STK(4));
+    rt_api_ret = RD16(STK(0)) | ((u32)RD16(STK(2)) << 16);   /* caller (debugging) */
     if (api_log_on) rt_log("api CreateCompatibleBitmap(%x %x %x)\n", (u32)a0, (u32)a1, (u32)a2);
     cpu.r[R_ESP] = (u16)(cpu.r[R_ESP] + 10);
     u32 r = w16_CreateCompatibleBitmap(a0, a1, a2);
@@ -280,6 +307,7 @@ void api_KERNEL_60(void)
     u16 a0 = (u16)RD16(STK(12));
     u32 a1 = (RD16(STK(8)) | ((u32)RD16(STK(10)) << 16));
     u32 a2 = (RD16(STK(4)) | ((u32)RD16(STK(6)) << 16));
+    rt_api_ret = RD16(STK(0)) | ((u32)RD16(STK(2)) << 16);   /* caller (debugging) */
     if (api_log_on) rt_log("api FindResource(%x %x %x)\n", (u32)a0, (u32)a1, (u32)a2);
     cpu.r[R_ESP] = (u16)(cpu.r[R_ESP] + 14);
     u32 r = w16_FindResource(a0, a1, a2);
@@ -289,6 +317,7 @@ u32 __attribute__((weak)) w16_CreateCompatibleDC(u16 a0) { (void)a0; if (stub_n+
 void api_GDI_52(void)
 {
     u16 a0 = (u16)RD16(STK(4));
+    rt_api_ret = RD16(STK(0)) | ((u32)RD16(STK(2)) << 16);   /* caller (debugging) */
     if (api_log_on) rt_log("api CreateCompatibleDC(%x)\n", (u32)a0);
     cpu.r[R_ESP] = (u16)(cpu.r[R_ESP] + 6);
     u32 r = w16_CreateCompatibleDC(a0);
@@ -299,6 +328,7 @@ void api_KERNEL_61(void)
 {
     u16 a0 = (u16)RD16(STK(6));
     u16 a1 = (u16)RD16(STK(4));
+    rt_api_ret = RD16(STK(0)) | ((u32)RD16(STK(2)) << 16);   /* caller (debugging) */
     if (api_log_on) rt_log("api LoadResource(%x %x)\n", (u32)a0, (u32)a1);
     cpu.r[R_ESP] = (u16)(cpu.r[R_ESP] + 8);
     u32 r = w16_LoadResource(a0, a1);
@@ -309,6 +339,7 @@ void api_USER_173(void)
 {
     u16 a0 = (u16)RD16(STK(8));
     u32 a1 = (RD16(STK(4)) | ((u32)RD16(STK(6)) << 16));
+    rt_api_ret = RD16(STK(0)) | ((u32)RD16(STK(2)) << 16);   /* caller (debugging) */
     if (api_log_on) rt_log("api LoadCursor(%x %x)\n", (u32)a0, (u32)a1);
     cpu.r[R_ESP] = (u16)(cpu.r[R_ESP] + 10);
     u32 r = w16_LoadCursor(a0, a1);
@@ -318,6 +349,7 @@ u32 __attribute__((weak)) w16_LockResource(u16 a0) { (void)a0; if (stub_n++ < 20
 void api_KERNEL_62(void)
 {
     u16 a0 = (u16)RD16(STK(4));
+    rt_api_ret = RD16(STK(0)) | ((u32)RD16(STK(2)) << 16);   /* caller (debugging) */
     if (api_log_on) rt_log("api LockResource(%x)\n", (u32)a0);
     cpu.r[R_ESP] = (u16)(cpu.r[R_ESP] + 6);
     u32 r = w16_LockResource(a0);
@@ -327,6 +359,7 @@ u32 __attribute__((weak)) w16_FreeResource(u16 a0) { (void)a0; if (stub_n++ < 20
 void api_KERNEL_63(void)
 {
     u16 a0 = (u16)RD16(STK(4));
+    rt_api_ret = RD16(STK(0)) | ((u32)RD16(STK(2)) << 16);   /* caller (debugging) */
     if (api_log_on) rt_log("api FreeResource(%x)\n", (u32)a0);
     cpu.r[R_ESP] = (u16)(cpu.r[R_ESP] + 6);
     u32 r = w16_FreeResource(a0);
@@ -337,6 +370,7 @@ void api_KERNEL_65(void)
 {
     u16 a0 = (u16)RD16(STK(6));
     u16 a1 = (u16)RD16(STK(4));
+    rt_api_ret = RD16(STK(0)) | ((u32)RD16(STK(2)) << 16);   /* caller (debugging) */
     if (api_log_on) rt_log("api SizeofResource(%x %x)\n", (u32)a0, (u32)a1);
     cpu.r[R_ESP] = (u16)(cpu.r[R_ESP] + 8);
     u32 r = w16_SizeofResource(a0, a1);
@@ -346,6 +380,7 @@ u32 __attribute__((weak)) w16_DeleteDC(u16 a0) { (void)a0; if (stub_n++ < 200) r
 void api_GDI_68(void)
 {
     u16 a0 = (u16)RD16(STK(4));
+    rt_api_ret = RD16(STK(0)) | ((u32)RD16(STK(2)) << 16);   /* caller (debugging) */
     if (api_log_on) rt_log("api DeleteDC(%x)\n", (u32)a0);
     cpu.r[R_ESP] = (u16)(cpu.r[R_ESP] + 6);
     u32 r = w16_DeleteDC(a0);
@@ -355,6 +390,7 @@ u32 __attribute__((weak)) w16_DeleteObject(u16 a0) { (void)a0; if (stub_n++ < 20
 void api_GDI_69(void)
 {
     u16 a0 = (u16)RD16(STK(4));
+    rt_api_ret = RD16(STK(0)) | ((u32)RD16(STK(2)) << 16);   /* caller (debugging) */
     if (api_log_on) rt_log("api DeleteObject(%x)\n", (u32)a0);
     cpu.r[R_ESP] = (u16)(cpu.r[R_ESP] + 6);
     u32 r = w16_DeleteObject(a0);
@@ -364,6 +400,7 @@ u32 __attribute__((weak)) w16_GetDC(u16 a0) { (void)a0; if (stub_n++ < 200) rt_l
 void api_USER_66(void)
 {
     u16 a0 = (u16)RD16(STK(4));
+    rt_api_ret = RD16(STK(0)) | ((u32)RD16(STK(2)) << 16);   /* caller (debugging) */
     if (api_log_on) rt_log("api GetDC(%x)\n", (u32)a0);
     cpu.r[R_ESP] = (u16)(cpu.r[R_ESP] + 6);
     u32 r = w16_GetDC(a0);
@@ -374,6 +411,7 @@ void api_USER_68(void)
 {
     u16 a0 = (u16)RD16(STK(6));
     u16 a1 = (u16)RD16(STK(4));
+    rt_api_ret = RD16(STK(0)) | ((u32)RD16(STK(2)) << 16);   /* caller (debugging) */
     if (api_log_on) rt_log("api ReleaseDC(%x %x)\n", (u32)a0, (u32)a1);
     cpu.r[R_ESP] = (u16)(cpu.r[R_ESP] + 8);
     u32 r = w16_ReleaseDC(a0, a1);
@@ -383,6 +421,7 @@ u32 __attribute__((weak)) w16_SetCursor(u16 a0) { (void)a0; if (stub_n++ < 200) 
 void api_USER_69(void)
 {
     u16 a0 = (u16)RD16(STK(4));
+    rt_api_ret = RD16(STK(0)) | ((u32)RD16(STK(2)) << 16);   /* caller (debugging) */
     if (api_log_on) rt_log("api SetCursor(%x)\n", (u32)a0);
     cpu.r[R_ESP] = (u16)(cpu.r[R_ESP] + 6);
     u32 r = w16_SetCursor(a0);
@@ -392,6 +431,7 @@ u32 __attribute__((weak)) w16_ShowCursor(u16 a0) { (void)a0; if (stub_n++ < 200)
 void api_USER_71(void)
 {
     u16 a0 = (u16)RD16(STK(4));
+    rt_api_ret = RD16(STK(0)) | ((u32)RD16(STK(2)) << 16);   /* caller (debugging) */
     if (api_log_on) rt_log("api ShowCursor(%x)\n", (u32)a0);
     cpu.r[R_ESP] = (u16)(cpu.r[R_ESP] + 6);
     u32 r = w16_ShowCursor(a0);
@@ -405,6 +445,7 @@ void api_USER_72(void)
     s16 a2 = (s16)RD16(STK(8));
     s16 a3 = (s16)RD16(STK(6));
     s16 a4 = (s16)RD16(STK(4));
+    rt_api_ret = RD16(STK(0)) | ((u32)RD16(STK(2)) << 16);   /* caller (debugging) */
     if (api_log_on) rt_log("api SetRect(%x %x %x %x %x)\n", (u32)a0, (u32)a1, (u32)a2, (u32)a3, (u32)a4);
     cpu.r[R_ESP] = (u16)(cpu.r[R_ESP] + 16);
     u32 r = w16_SetRect(a0, a1, a2, a3, a4);
@@ -415,6 +456,7 @@ void api_USER_74(void)
 {
     u32 a0 = (RD16(STK(8)) | ((u32)RD16(STK(10)) << 16));
     u32 a1 = (RD16(STK(4)) | ((u32)RD16(STK(6)) << 16));
+    rt_api_ret = RD16(STK(0)) | ((u32)RD16(STK(2)) << 16);   /* caller (debugging) */
     if (api_log_on) rt_log("api CopyRect(%x %x)\n", (u32)a0, (u32)a1);
     cpu.r[R_ESP] = (u16)(cpu.r[R_ESP] + 12);
     u32 r = w16_CopyRect(a0, a1);
@@ -426,6 +468,7 @@ void api_USER_77(void)
     u32 a0 = (RD16(STK(8)) | ((u32)RD16(STK(10)) << 16));
     s16 a1 = (s16)RD16(STK(6));
     s16 a2 = (s16)RD16(STK(4));
+    rt_api_ret = RD16(STK(0)) | ((u32)RD16(STK(2)) << 16);   /* caller (debugging) */
     if (api_log_on) rt_log("api OffsetRect(%x %x %x)\n", (u32)a0, (u32)a1, (u32)a2);
     cpu.r[R_ESP] = (u16)(cpu.r[R_ESP] + 12);
     u32 r = w16_OffsetRect(a0, a1, a2);
@@ -437,6 +480,7 @@ void api_USER_79(void)
     u32 a0 = (RD16(STK(12)) | ((u32)RD16(STK(14)) << 16));
     u32 a1 = (RD16(STK(8)) | ((u32)RD16(STK(10)) << 16));
     u32 a2 = (RD16(STK(4)) | ((u32)RD16(STK(6)) << 16));
+    rt_api_ret = RD16(STK(0)) | ((u32)RD16(STK(2)) << 16);   /* caller (debugging) */
     if (api_log_on) rt_log("api IntersectRect(%x %x %x)\n", (u32)a0, (u32)a1, (u32)a2);
     cpu.r[R_ESP] = (u16)(cpu.r[R_ESP] + 16);
     u32 r = w16_IntersectRect(a0, a1, a2);
@@ -448,6 +492,7 @@ void api_USER_80(void)
     u32 a0 = (RD16(STK(12)) | ((u32)RD16(STK(14)) << 16));
     u32 a1 = (RD16(STK(8)) | ((u32)RD16(STK(10)) << 16));
     u32 a2 = (RD16(STK(4)) | ((u32)RD16(STK(6)) << 16));
+    rt_api_ret = RD16(STK(0)) | ((u32)RD16(STK(2)) << 16);   /* caller (debugging) */
     if (api_log_on) rt_log("api UnionRect(%x %x %x)\n", (u32)a0, (u32)a1, (u32)a2);
     cpu.r[R_ESP] = (u16)(cpu.r[R_ESP] + 16);
     u32 r = w16_UnionRect(a0, a1, a2);
@@ -456,6 +501,7 @@ void api_USER_80(void)
 u32 __attribute__((weak)) w16_WinGCreateDC(void) {  if (stub_n++ < 200) rt_log("STUB WING.WinGCreateDC()\n"); return 0; }
 void api_WING_1001(void)
 {
+    rt_api_ret = RD16(STK(0)) | ((u32)RD16(STK(2)) << 16);   /* caller (debugging) */
     if (api_log_on) rt_log("api WinGCreateDC()\n");
     cpu.r[R_ESP] = (u16)(cpu.r[R_ESP] + 4);
     u32 r = w16_WinGCreateDC();
@@ -467,6 +513,7 @@ void api_WING_1003(void)
     u16 a0 = (u16)RD16(STK(12));
     u32 a1 = (RD16(STK(8)) | ((u32)RD16(STK(10)) << 16));
     u32 a2 = (RD16(STK(4)) | ((u32)RD16(STK(6)) << 16));
+    rt_api_ret = RD16(STK(0)) | ((u32)RD16(STK(2)) << 16);   /* caller (debugging) */
     if (api_log_on) rt_log("api WinGCreateBitmap(%x %x %x)\n", (u32)a0, (u32)a1, (u32)a2);
     cpu.r[R_ESP] = (u16)(cpu.r[R_ESP] + 14);
     u32 r = w16_WinGCreateBitmap(a0, a1, a2);
@@ -479,6 +526,7 @@ void api_WING_1006(void)
     u16 a1 = (u16)RD16(STK(10));
     u16 a2 = (u16)RD16(STK(8));
     u32 a3 = (RD16(STK(4)) | ((u32)RD16(STK(6)) << 16));
+    rt_api_ret = RD16(STK(0)) | ((u32)RD16(STK(2)) << 16);   /* caller (debugging) */
     if (api_log_on) rt_log("api WinGSetDIBColorTable(%x %x %x %x)\n", (u32)a0, (u32)a1, (u32)a2, (u32)a3);
     cpu.r[R_ESP] = (u16)(cpu.r[R_ESP] + 14);
     u32 r = w16_WinGSetDIBColorTable(a0, a1, a2, a3);
@@ -497,6 +545,7 @@ void api_WING_1009(void)
     u16 a7 = (u16)RD16(STK(8));
     u16 a8 = (u16)RD16(STK(6));
     u16 a9 = (u16)RD16(STK(4));
+    rt_api_ret = RD16(STK(0)) | ((u32)RD16(STK(2)) << 16);   /* caller (debugging) */
     if (api_log_on) rt_log("api WinGStretchBlt(%x %x %x %x %x %x %x %x %x %x)\n", (u32)a0, (u32)a1, (u32)a2, (u32)a3, (u32)a4, (u32)a5, (u32)a6, (u32)a7, (u32)a8, (u32)a9);
     cpu.r[R_ESP] = (u16)(cpu.r[R_ESP] + 24);
     u32 r = w16_WinGStretchBlt(a0, a1, a2, a3, a4, a5, a6, a7, a8, a9);
@@ -512,6 +561,7 @@ void api_GDI_441(void)
     u32 a4 = (RD16(STK(10)) | ((u32)RD16(STK(12)) << 16));
     u32 a5 = (RD16(STK(6)) | ((u32)RD16(STK(8)) << 16));
     u16 a6 = (u16)RD16(STK(4));
+    rt_api_ret = RD16(STK(0)) | ((u32)RD16(STK(2)) << 16);   /* caller (debugging) */
     if (api_log_on) rt_log("api GetDIBits(%x %x %x %x %x %x %x)\n", (u32)a0, (u32)a1, (u32)a2, (u32)a3, (u32)a4, (u32)a5, (u32)a6);
     cpu.r[R_ESP] = (u16)(cpu.r[R_ESP] + 22);
     u32 r = w16_GetDIBits(a0, a1, a2, a3, a4, a5, a6);
@@ -524,6 +574,7 @@ void api_USER_107(void)
     u16 a1 = (u16)RD16(STK(10));
     u16 a2 = (u16)RD16(STK(8));
     u32 a3 = (RD16(STK(4)) | ((u32)RD16(STK(6)) << 16));
+    rt_api_ret = RD16(STK(0)) | ((u32)RD16(STK(2)) << 16);   /* caller (debugging) */
     if (api_log_on) rt_log("api DefWindowProc(%x %x %x %x)\n", (u32)a0, (u32)a1, (u32)a2, (u32)a3);
     cpu.r[R_ESP] = (u16)(cpu.r[R_ESP] + 14);
     u32 r = w16_DefWindowProc(a0, a1, a2, a3);
@@ -534,6 +585,7 @@ void api_GDI_373(void)
 {
     u16 a0 = (u16)RD16(STK(6));
     u16 a1 = (u16)RD16(STK(4));
+    rt_api_ret = RD16(STK(0)) | ((u32)RD16(STK(2)) << 16);   /* caller (debugging) */
     if (api_log_on) rt_log("api SetSystemPaletteUse(%x %x)\n", (u32)a0, (u32)a1);
     cpu.r[R_ESP] = (u16)(cpu.r[R_ESP] + 8);
     u32 r = w16_SetSystemPaletteUse(a0, a1);
@@ -547,6 +599,7 @@ void api_USER_109(void)
     u16 a2 = (u16)RD16(STK(8));
     u16 a3 = (u16)RD16(STK(6));
     u16 a4 = (u16)RD16(STK(4));
+    rt_api_ret = RD16(STK(0)) | ((u32)RD16(STK(2)) << 16);   /* caller (debugging) */
     if (api_log_on) rt_log("api PeekMessage(%x %x %x %x %x)\n", (u32)a0, (u32)a1, (u32)a2, (u32)a3, (u32)a4);
     cpu.r[R_ESP] = (u16)(cpu.r[R_ESP] + 16);
     u32 r = w16_PeekMessage(a0, a1, a2, a3, a4);
@@ -556,6 +609,7 @@ u32 __attribute__((weak)) w16_TranslateMessage(u32 a0) { (void)a0; if (stub_n++ 
 void api_USER_113(void)
 {
     u32 a0 = (RD16(STK(4)) | ((u32)RD16(STK(6)) << 16));
+    rt_api_ret = RD16(STK(0)) | ((u32)RD16(STK(2)) << 16);   /* caller (debugging) */
     if (api_log_on) rt_log("api TranslateMessage(%x)\n", (u32)a0);
     cpu.r[R_ESP] = (u16)(cpu.r[R_ESP] + 8);
     u32 r = w16_TranslateMessage(a0);
@@ -565,6 +619,7 @@ u32 __attribute__((weak)) w16_DispatchMessage(u32 a0) { (void)a0; if (stub_n++ <
 void api_USER_114(void)
 {
     u32 a0 = (RD16(STK(4)) | ((u32)RD16(STK(6)) << 16));
+    rt_api_ret = RD16(STK(0)) | ((u32)RD16(STK(2)) << 16);   /* caller (debugging) */
     if (api_log_on) rt_log("api DispatchMessage(%x)\n", (u32)a0);
     cpu.r[R_ESP] = (u16)(cpu.r[R_ESP] + 8);
     u32 r = w16_DispatchMessage(a0);
@@ -573,6 +628,7 @@ void api_USER_114(void)
 u32 __attribute__((weak)) w16_GetMessagePos(void) {  if (stub_n++ < 200) rt_log("STUB USER.GetMessagePos()\n"); return 0; }
 void api_USER_119(void)
 {
+    rt_api_ret = RD16(STK(0)) | ((u32)RD16(STK(2)) << 16);   /* caller (debugging) */
     if (api_log_on) rt_log("api GetMessagePos()\n");
     cpu.r[R_ESP] = (u16)(cpu.r[R_ESP] + 4);
     u32 r = w16_GetMessagePos();
@@ -581,6 +637,7 @@ void api_USER_119(void)
 u32 __attribute__((weak)) w16_GetMessageTime(void) {  if (stub_n++ < 200) rt_log("STUB USER.GetMessageTime()\n"); return 0; }
 void api_USER_120(void)
 {
+    rt_api_ret = RD16(STK(0)) | ((u32)RD16(STK(2)) << 16);   /* caller (debugging) */
     if (api_log_on) rt_log("api GetMessageTime()\n");
     cpu.r[R_ESP] = (u16)(cpu.r[R_ESP] + 4);
     u32 r = w16_GetMessageTime();
@@ -593,6 +650,7 @@ void api_USER_1(void)
     u32 a1 = (RD16(STK(10)) | ((u32)RD16(STK(12)) << 16));
     u32 a2 = (RD16(STK(6)) | ((u32)RD16(STK(8)) << 16));
     u16 a3 = (u16)RD16(STK(4));
+    rt_api_ret = RD16(STK(0)) | ((u32)RD16(STK(2)) << 16);   /* caller (debugging) */
     if (api_log_on) rt_log("api MessageBox(%x %x %x %x)\n", (u32)a0, (u32)a1, (u32)a2, (u32)a3);
     cpu.r[R_ESP] = (u16)(cpu.r[R_ESP] + 16);
     u32 r = w16_MessageBox(a0, a1, a2, a3);
@@ -602,6 +660,7 @@ u32 __attribute__((weak)) w16_PostQuitMessage(u16 a0) { (void)a0; if (stub_n++ <
 void api_USER_6(void)
 {
     u16 a0 = (u16)RD16(STK(4));
+    rt_api_ret = RD16(STK(0)) | ((u32)RD16(STK(2)) << 16);   /* caller (debugging) */
     if (api_log_on) rt_log("api PostQuitMessage(%x)\n", (u32)a0);
     cpu.r[R_ESP] = (u16)(cpu.r[R_ESP] + 6);
     u32 r = w16_PostQuitMessage(a0);
@@ -610,6 +669,7 @@ void api_USER_6(void)
 u32 __attribute__((weak)) w16_GetTickCount(void) {  if (stub_n++ < 200) rt_log("STUB USER.GetTickCount()\n"); return 0; }
 void api_USER_13(void)
 {
+    rt_api_ret = RD16(STK(0)) | ((u32)RD16(STK(2)) << 16);   /* caller (debugging) */
     if (api_log_on) rt_log("api GetTickCount()\n");
     cpu.r[R_ESP] = (u16)(cpu.r[R_ESP] + 4);
     u32 r = w16_GetTickCount();
@@ -619,6 +679,7 @@ u32 __attribute__((weak)) w16_UnrealizeObject(u16 a0) { (void)a0; if (stub_n++ <
 void api_GDI_150(void)
 {
     u16 a0 = (u16)RD16(STK(4));
+    rt_api_ret = RD16(STK(0)) | ((u32)RD16(STK(2)) << 16);   /* caller (debugging) */
     if (api_log_on) rt_log("api UnrealizeObject(%x)\n", (u32)a0);
     cpu.r[R_ESP] = (u16)(cpu.r[R_ESP] + 6);
     u32 r = w16_UnrealizeObject(a0);
@@ -628,6 +689,7 @@ u32 __attribute__((weak)) w16_GetCursorPos(u32 a0) { (void)a0; if (stub_n++ < 20
 void api_USER_17(void)
 {
     u32 a0 = (RD16(STK(4)) | ((u32)RD16(STK(6)) << 16));
+    rt_api_ret = RD16(STK(0)) | ((u32)RD16(STK(2)) << 16);   /* caller (debugging) */
     if (api_log_on) rt_log("api GetCursorPos(%x)\n", (u32)a0);
     cpu.r[R_ESP] = (u16)(cpu.r[R_ESP] + 8);
     u32 r = w16_GetCursorPos(a0);
@@ -641,6 +703,7 @@ void api_GDI_27(void)
     s16 a2 = (s16)RD16(STK(8));
     s16 a3 = (s16)RD16(STK(6));
     s16 a4 = (s16)RD16(STK(4));
+    rt_api_ret = RD16(STK(0)) | ((u32)RD16(STK(2)) << 16);   /* caller (debugging) */
     if (api_log_on) rt_log("api Rectangle(%x %x %x %x %x)\n", (u32)a0, (u32)a1, (u32)a2, (u32)a3, (u32)a4);
     cpu.r[R_ESP] = (u16)(cpu.r[R_ESP] + 14);
     u32 r = w16_Rectangle(a0, a1, a2, a3, a4);
@@ -651,6 +714,7 @@ void api_KERNEL_166(void)
 {
     u32 a0 = (RD16(STK(6)) | ((u32)RD16(STK(8)) << 16));
     u16 a1 = (u16)RD16(STK(4));
+    rt_api_ret = RD16(STK(0)) | ((u32)RD16(STK(2)) << 16);   /* caller (debugging) */
     if (api_log_on) rt_log("api WinExec(%x %x)\n", (u32)a0, (u32)a1);
     cpu.r[R_ESP] = (u16)(cpu.r[R_ESP] + 10);
     u32 r = w16_WinExec(a0, a1);
@@ -661,6 +725,7 @@ void api_USER_29(void)
 {
     u16 a0 = (u16)RD16(STK(8));
     u32 a1 = (RD16(STK(4)) | ((u32)RD16(STK(6)) << 16));
+    rt_api_ret = RD16(STK(0)) | ((u32)RD16(STK(2)) << 16);   /* caller (debugging) */
     if (api_log_on) rt_log("api ScreenToClient(%x %x)\n", (u32)a0, (u32)a1);
     cpu.r[R_ESP] = (u16)(cpu.r[R_ESP] + 10);
     u32 r = w16_ScreenToClient(a0, a1);
@@ -674,6 +739,7 @@ void api_GDI_41(void)
     u16 a2 = (u16)RD16(STK(8));
     u16 a3 = (u16)RD16(STK(6));
     u16 a4 = (u16)RD16(STK(4));
+    rt_api_ret = RD16(STK(0)) | ((u32)RD16(STK(2)) << 16);   /* caller (debugging) */
     if (api_log_on) rt_log("api FrameRgn(%x %x %x %x %x)\n", (u32)a0, (u32)a1, (u32)a2, (u32)a3, (u32)a4);
     cpu.r[R_ESP] = (u16)(cpu.r[R_ESP] + 14);
     u32 r = w16_FrameRgn(a0, a1, a2, a3, a4);
@@ -685,6 +751,7 @@ void api_MMSYSTEM_402(void)
     u16 a0 = (u16)RD16(STK(10));
     u32 a1 = (RD16(STK(6)) | ((u32)RD16(STK(8)) << 16));
     u16 a2 = (u16)RD16(STK(4));
+    rt_api_ret = RD16(STK(0)) | ((u32)RD16(STK(2)) << 16);   /* caller (debugging) */
     if (api_log_on) rt_log("api waveOutGetDevCaps(%x %x %x)\n", (u32)a0, (u32)a1, (u32)a2);
     cpu.r[R_ESP] = (u16)(cpu.r[R_ESP] + 12);
     u32 r = w16_waveOutGetDevCaps(a0, a1, a2);
@@ -695,6 +762,7 @@ void api_USER_39(void)
 {
     u16 a0 = (u16)RD16(STK(8));
     u32 a1 = (RD16(STK(4)) | ((u32)RD16(STK(6)) << 16));
+    rt_api_ret = RD16(STK(0)) | ((u32)RD16(STK(2)) << 16);   /* caller (debugging) */
     if (api_log_on) rt_log("api BeginPaint(%x %x)\n", (u32)a0, (u32)a1);
     cpu.r[R_ESP] = (u16)(cpu.r[R_ESP] + 10);
     u32 r = w16_BeginPaint(a0, a1);
@@ -705,6 +773,7 @@ void api_USER_40(void)
 {
     u16 a0 = (u16)RD16(STK(8));
     u32 a1 = (RD16(STK(4)) | ((u32)RD16(STK(6)) << 16));
+    rt_api_ret = RD16(STK(0)) | ((u32)RD16(STK(2)) << 16);   /* caller (debugging) */
     if (api_log_on) rt_log("api EndPaint(%x %x)\n", (u32)a0, (u32)a1);
     cpu.r[R_ESP] = (u16)(cpu.r[R_ESP] + 10);
     u32 r = w16_EndPaint(a0, a1);
@@ -724,6 +793,7 @@ void api_USER_41(void)
     u16 a8 = (u16)RD16(STK(10));
     u16 a9 = (u16)RD16(STK(8));
     u32 a10 = (RD16(STK(4)) | ((u32)RD16(STK(6)) << 16));
+    rt_api_ret = RD16(STK(0)) | ((u32)RD16(STK(2)) << 16);   /* caller (debugging) */
     if (api_log_on) rt_log("api CreateWindow(%x %x %x %x %x %x %x %x %x %x %x)\n", (u32)a0, (u32)a1, (u32)a2, (u32)a3, (u32)a4, (u32)a5, (u32)a6, (u32)a7, (u32)a8, (u32)a9, (u32)a10);
     cpu.r[R_ESP] = (u16)(cpu.r[R_ESP] + 34);
     u32 r = w16_CreateWindow(a0, a1, a2, a3, a4, a5, a6, a7, a8, a9, a10);
@@ -733,6 +803,7 @@ u32 __attribute__((weak)) w16_CreateBrushIndirect(u32 a0) { (void)a0; if (stub_n
 void api_GDI_50(void)
 {
     u32 a0 = (RD16(STK(4)) | ((u32)RD16(STK(6)) << 16));
+    rt_api_ret = RD16(STK(0)) | ((u32)RD16(STK(2)) << 16);   /* caller (debugging) */
     if (api_log_on) rt_log("api CreateBrushIndirect(%x)\n", (u32)a0);
     cpu.r[R_ESP] = (u16)(cpu.r[R_ESP] + 8);
     u32 r = w16_CreateBrushIndirect(a0);
@@ -743,6 +814,7 @@ void api_USER_42(void)
 {
     u16 a0 = (u16)RD16(STK(6));
     u16 a1 = (u16)RD16(STK(4));
+    rt_api_ret = RD16(STK(0)) | ((u32)RD16(STK(2)) << 16);   /* caller (debugging) */
     if (api_log_on) rt_log("api ShowWindow(%x %x)\n", (u32)a0, (u32)a1);
     cpu.r[R_ESP] = (u16)(cpu.r[R_ESP] + 8);
     u32 r = w16_ShowWindow(a0, a1);
@@ -755,6 +827,7 @@ void api_GDI_64(void)
     s16 a1 = (s16)RD16(STK(8));
     s16 a2 = (s16)RD16(STK(6));
     s16 a3 = (s16)RD16(STK(4));
+    rt_api_ret = RD16(STK(0)) | ((u32)RD16(STK(2)) << 16);   /* caller (debugging) */
     if (api_log_on) rt_log("api CreateRectRgn(%x %x %x %x)\n", (u32)a0, (u32)a1, (u32)a2, (u32)a3);
     cpu.r[R_ESP] = (u16)(cpu.r[R_ESP] + 12);
     u32 r = w16_CreateRectRgn(a0, a1, a2, a3);
@@ -764,6 +837,7 @@ u32 __attribute__((weak)) w16_RegisterClass(u32 a0) { (void)a0; if (stub_n++ < 2
 void api_USER_57(void)
 {
     u32 a0 = (RD16(STK(4)) | ((u32)RD16(STK(6)) << 16));
+    rt_api_ret = RD16(STK(0)) | ((u32)RD16(STK(2)) << 16);   /* caller (debugging) */
     if (api_log_on) rt_log("api RegisterClass(%x)\n", (u32)a0);
     cpu.r[R_ESP] = (u16)(cpu.r[R_ESP] + 8);
     u32 r = w16_RegisterClass(a0);
@@ -775,6 +849,7 @@ void api_KERNEL_74(void)
     u32 a0 = (RD16(STK(10)) | ((u32)RD16(STK(12)) << 16));
     u32 a1 = (RD16(STK(6)) | ((u32)RD16(STK(8)) << 16));
     u16 a2 = (u16)RD16(STK(4));
+    rt_api_ret = RD16(STK(0)) | ((u32)RD16(STK(2)) << 16);   /* caller (debugging) */
     if (api_log_on) rt_log("api OpenFile(%x %x %x)\n", (u32)a0, (u32)a1, (u32)a2);
     cpu.r[R_ESP] = (u16)(cpu.r[R_ESP] + 14);
     u32 r = w16_OpenFile(a0, a1, a2);
@@ -784,6 +859,7 @@ u32 __attribute__((weak)) w16_CreateSolidBrush(u32 a0) { (void)a0; if (stub_n++ 
 void api_GDI_66(void)
 {
     u32 a0 = (RD16(STK(4)) | ((u32)RD16(STK(6)) << 16));
+    rt_api_ret = RD16(STK(0)) | ((u32)RD16(STK(2)) << 16);   /* caller (debugging) */
     if (api_log_on) rt_log("api CreateSolidBrush(%x)\n", (u32)a0);
     cpu.r[R_ESP] = (u16)(cpu.r[R_ESP] + 8);
     u32 r = w16_CreateSolidBrush(a0);
@@ -793,6 +869,7 @@ u32 __attribute__((weak)) w16__lclose(u16 a0) { (void)a0; if (stub_n++ < 200) rt
 void api_KERNEL_81(void)
 {
     u16 a0 = (u16)RD16(STK(4));
+    rt_api_ret = RD16(STK(0)) | ((u32)RD16(STK(2)) << 16);   /* caller (debugging) */
     if (api_log_on) rt_log("api _lclose(%x)\n", (u32)a0);
     cpu.r[R_ESP] = (u16)(cpu.r[R_ESP] + 6);
     u32 r = w16__lclose(a0);
@@ -803,6 +880,7 @@ void api_GDI_80(void)
 {
     u16 a0 = (u16)RD16(STK(6));
     s16 a1 = (s16)RD16(STK(4));
+    rt_api_ret = RD16(STK(0)) | ((u32)RD16(STK(2)) << 16);   /* caller (debugging) */
     if (api_log_on) rt_log("api GetDeviceCaps(%x %x)\n", (u32)a0, (u32)a1);
     cpu.r[R_ESP] = (u16)(cpu.r[R_ESP] + 8);
     u32 r = w16_GetDeviceCaps(a0, a1);
@@ -814,6 +892,7 @@ void api_KERNEL_350(void)
     u16 a0 = (u16)RD16(STK(12));
     u32 a1 = (RD16(STK(8)) | ((u32)RD16(STK(10)) << 16));
     u32 a2 = (RD16(STK(4)) | ((u32)RD16(STK(6)) << 16));
+    rt_api_ret = RD16(STK(0)) | ((u32)RD16(STK(2)) << 16);   /* caller (debugging) */
     if (api_log_on) rt_log("api _hwrite(%x %x %x)\n", (u32)a0, (u32)a1, (u32)a2);
     cpu.r[R_ESP] = (u16)(cpu.r[R_ESP] + 14);
     u32 r = w16__hwrite(a0, a1, a2);
@@ -823,6 +902,7 @@ u32 __attribute__((weak)) w16_GetStockObject(u16 a0) { (void)a0; if (stub_n++ < 
 void api_GDI_87(void)
 {
     u16 a0 = (u16)RD16(STK(4));
+    rt_api_ret = RD16(STK(0)) | ((u32)RD16(STK(2)) << 16);   /* caller (debugging) */
     if (api_log_on) rt_log("api GetStockObject(%x)\n", (u32)a0);
     cpu.r[R_ESP] = (u16)(cpu.r[R_ESP] + 6);
     u32 r = w16_GetStockObject(a0);
@@ -834,6 +914,7 @@ void api_KERNEL_84(void)
     u16 a0 = (u16)RD16(STK(10));
     u32 a1 = (RD16(STK(6)) | ((u32)RD16(STK(8)) << 16));
     u16 a2 = (u16)RD16(STK(4));
+    rt_api_ret = RD16(STK(0)) | ((u32)RD16(STK(2)) << 16);   /* caller (debugging) */
     if (api_log_on) rt_log("api _llseek(%x %x %x)\n", (u32)a0, (u32)a1, (u32)a2);
     cpu.r[R_ESP] = (u16)(cpu.r[R_ESP] + 12);
     u32 r = w16__llseek(a0, a1, a2);
@@ -845,6 +926,7 @@ void api_KERNEL_349(void)
     u16 a0 = (u16)RD16(STK(12));
     u32 a1 = (RD16(STK(8)) | ((u32)RD16(STK(10)) << 16));
     u32 a2 = (RD16(STK(4)) | ((u32)RD16(STK(6)) << 16));
+    rt_api_ret = RD16(STK(0)) | ((u32)RD16(STK(2)) << 16);   /* caller (debugging) */
     if (api_log_on) rt_log("api _hread(%x %x %x)\n", (u32)a0, (u32)a1, (u32)a2);
     cpu.r[R_ESP] = (u16)(cpu.r[R_ESP] + 14);
     u32 r = w16__hread(a0, a1, a2);
@@ -854,6 +936,7 @@ u32 __attribute__((weak)) w16_SetErrorMode(u16 a0) { (void)a0; if (stub_n++ < 20
 void api_KERNEL_107(void)
 {
     u16 a0 = (u16)RD16(STK(4));
+    rt_api_ret = RD16(STK(0)) | ((u32)RD16(STK(2)) << 16);   /* caller (debugging) */
     if (api_log_on) rt_log("api SetErrorMode(%x)\n", (u32)a0);
     cpu.r[R_ESP] = (u16)(cpu.r[R_ESP] + 6);
     u32 r = w16_SetErrorMode(a0);
@@ -862,6 +945,7 @@ void api_KERNEL_107(void)
 u32 __attribute__((weak)) w16_FatalExit(void) {  if (stub_n++ < 200) rt_log("STUB KERNEL.FatalExit()\n"); return 0; }
 void api_KERNEL_1(void)
 {
+    rt_api_ret = RD16(STK(0)) | ((u32)RD16(STK(2)) << 16);   /* caller (debugging) */
     if (api_log_on) rt_log("api FatalExit()\n");
     cpu.r[R_ESP] = (u16)(cpu.r[R_ESP] + 4);
     u32 r = w16_FatalExit();
@@ -870,6 +954,7 @@ void api_KERNEL_1(void)
 u32 __attribute__((weak)) w16_GetVersion(void) {  if (stub_n++ < 200) rt_log("STUB KERNEL.GetVersion()\n"); return 0; }
 void api_KERNEL_3(void)
 {
+    rt_api_ret = RD16(STK(0)) | ((u32)RD16(STK(2)) << 16);   /* caller (debugging) */
     if (api_log_on) rt_log("api GetVersion()\n");
     cpu.r[R_ESP] = (u16)(cpu.r[R_ESP] + 4);
     u32 r = w16_GetVersion();
@@ -878,6 +963,7 @@ void api_KERNEL_3(void)
 u32 __attribute__((weak)) w16_GetDOSEnvironment(void) {  if (stub_n++ < 200) rt_log("STUB KERNEL.GetDOSEnvironment()\n"); return 0; }
 void api_KERNEL_131(void)
 {
+    rt_api_ret = RD16(STK(0)) | ((u32)RD16(STK(2)) << 16);   /* caller (debugging) */
     if (api_log_on) rt_log("api GetDOSEnvironment()\n");
     cpu.r[R_ESP] = (u16)(cpu.r[R_ESP] + 4);
     u32 r = w16_GetDOSEnvironment();
@@ -888,6 +974,7 @@ void api_KERNEL_137(void)
 {
     u16 a0 = (u16)RD16(STK(8));
     u32 a1 = (RD16(STK(4)) | ((u32)RD16(STK(6)) << 16));
+    rt_api_ret = RD16(STK(0)) | ((u32)RD16(STK(2)) << 16);   /* caller (debugging) */
     if (api_log_on) rt_log("api FatalAppExit(%x %x)\n", (u32)a0, (u32)a1);
     cpu.r[R_ESP] = (u16)(cpu.r[R_ESP] + 10);
     u32 r = w16_FatalAppExit(a0, a1);
@@ -899,6 +986,7 @@ void api_KERNEL_16(void)
     u16 a0 = (u16)RD16(STK(10));
     u32 a1 = (RD16(STK(6)) | ((u32)RD16(STK(8)) << 16));
     u16 a2 = (u16)RD16(STK(4));
+    rt_api_ret = RD16(STK(0)) | ((u32)RD16(STK(2)) << 16);   /* caller (debugging) */
     if (api_log_on) rt_log("api GlobalReAlloc(%x %x %x)\n", (u32)a0, (u32)a1, (u32)a2);
     cpu.r[R_ESP] = (u16)(cpu.r[R_ESP] + 12);
     u32 r = w16_GlobalReAlloc(a0, a1, a2);
@@ -908,6 +996,7 @@ u32 __attribute__((weak)) w16_GlobalSize(u16 a0) { (void)a0; if (stub_n++ < 200)
 void api_KERNEL_20(void)
 {
     u16 a0 = (u16)RD16(STK(4));
+    rt_api_ret = RD16(STK(0)) | ((u32)RD16(STK(2)) << 16);   /* caller (debugging) */
     if (api_log_on) rt_log("api GlobalSize(%x)\n", (u32)a0);
     cpu.r[R_ESP] = (u16)(cpu.r[R_ESP] + 6);
     u32 r = w16_GlobalSize(a0);
@@ -917,6 +1006,7 @@ u32 __attribute__((weak)) w16_InitApp(u16 a0) { (void)a0; if (stub_n++ < 200) rt
 void api_USER_5(void)
 {
     u16 a0 = (u16)RD16(STK(4));
+    rt_api_ret = RD16(STK(0)) | ((u32)RD16(STK(2)) << 16);   /* caller (debugging) */
     if (api_log_on) rt_log("api InitApp(%x)\n", (u32)a0);
     cpu.r[R_ESP] = (u16)(cpu.r[R_ESP] + 6);
     u32 r = w16_InitApp(a0);
@@ -926,6 +1016,7 @@ u32 __attribute__((weak)) w16_LockSegment(u16 a0) { (void)a0; if (stub_n++ < 200
 void api_KERNEL_23(void)
 {
     u16 a0 = (u16)RD16(STK(4));
+    rt_api_ret = RD16(STK(0)) | ((u32)RD16(STK(2)) << 16);   /* caller (debugging) */
     if (api_log_on) rt_log("api LockSegment(%x)\n", (u32)a0);
     cpu.r[R_ESP] = (u16)(cpu.r[R_ESP] + 6);
     u32 r = w16_LockSegment(a0);
@@ -935,6 +1026,7 @@ u32 __attribute__((weak)) w16_WaitEvent(u16 a0) { (void)a0; if (stub_n++ < 200) 
 void api_KERNEL_30(void)
 {
     u16 a0 = (u16)RD16(STK(4));
+    rt_api_ret = RD16(STK(0)) | ((u32)RD16(STK(2)) << 16);   /* caller (debugging) */
     if (api_log_on) rt_log("api WaitEvent(%x)\n", (u32)a0);
     cpu.r[R_ESP] = (u16)(cpu.r[R_ESP] + 6);
     u32 r = w16_WaitEvent(a0);
@@ -946,6 +1038,7 @@ void api_KERNEL_49(void)
     u16 a0 = (u16)RD16(STK(10));
     u32 a1 = (RD16(STK(6)) | ((u32)RD16(STK(8)) << 16));
     s16 a2 = (s16)RD16(STK(4));
+    rt_api_ret = RD16(STK(0)) | ((u32)RD16(STK(2)) << 16);   /* caller (debugging) */
     if (api_log_on) rt_log("api GetModuleFileName(%x %x %x)\n", (u32)a0, (u32)a1, (u32)a2);
     cpu.r[R_ESP] = (u16)(cpu.r[R_ESP] + 12);
     u32 r = w16_GetModuleFileName(a0, a1, a2);

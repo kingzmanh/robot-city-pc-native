@@ -333,6 +333,18 @@ void present_frame(const u8 *pix, int pitch, const u32 *pal)
     have_frame = 1;
     frames++;
     u32 t = win_time();
+    if (getenv(ENV("CURSORCHECK"))) {   /* test: pink cursor pixels in each presented frame */
+        int n = 0;
+        for (int i = 0; i < 640 * 480; i++) {
+            u32 c = frame[i];
+            if (((c >> 16) & 255) > 120 && ((c >> 8) & 255) < 40 && (c & 255) > 50 && ((c >> 16) & 255) > (c & 255)) n++;
+        }
+        extern int gdi_last_w, gdi_last_h;
+        rt_log("frame %u cursorpx %d last %dx%d\n", t, n, gdi_last_w, gdi_last_h);
+        int f0, f1;   /* RC_FRAMEDUMP=from,to (ms): every presented frame -> shots */
+        if (getenv(ENV("FRAMEDUMP")) && sscanf(getenv(ENV("FRAMEDUMP")), "%d,%d", &f0, &f1) == 2 && (int)t >= f0 && (int)t <= f1)
+            save_shot(t);
+    }
     if (hwnd && !hidden && !IsIconic(hwnd)) {
         if (!(d3d_ok && present_cur())) {
             HDC dc = GetDC(hwnd);
@@ -411,7 +423,9 @@ static LRESULT CALLBACK host_proc(HWND h, UINT m, WPARAM wp, LPARAM lp)
         return 0;
     case WM_SYSCHAR: return 0;
     case WM_COMMAND: if (present_menu_command(LOWORD(wp))) { InvalidateRect(h, NULL, FALSE); return 0; } break;
-    case WM_KEYDOWN: keys[wp & 0xff] = 0x80; msgq_post(GHWND, WM_KEYDOWN, (u32)wp, (u32)lp); return 0;
+    case WM_KEYDOWN:
+        if (wp == VK_F9) { present_menu_command(1111); InvalidateRect(h, NULL, FALSE); return 0; }   /* Widescreen fill on / off */
+        keys[wp & 0xff] = 0x80; msgq_post(GHWND, WM_KEYDOWN, (u32)wp, (u32)lp); return 0;
     case WM_KEYUP: keys[wp & 0xff] = 0; msgq_post(GHWND, WM_KEYUP, (u32)wp, (u32)lp); return 0;
     case WM_CHAR: msgq_post(GHWND, WM_CHAR, (u32)wp, (u32)lp); return 0;
     case WM_MOUSEMOVE: case WM_LBUTTONDOWN: case WM_LBUTTONUP: case WM_RBUTTONDOWN: case WM_RBUTTONUP:
@@ -464,17 +478,32 @@ void win_create_host(const char *title, int w, int h)
     if (!hidden) { ShowWindow(hwnd, SW_SHOW); UpdateWindow(hwnd); }
 }
 
+/* wait: 1 = sleep a little when idle, 0 = no wait, -1 = input only (no
+   presenting: the game asks for the cursor position in the middle of
+   redrawing the scene and its cursor - showing that half-drawn screen made
+   the cursor flash) */
 int win_pump(int wait)
 {
     MSG m;
-    if (wait && qh == qt && !quit_posted) MsgWaitForMultipleObjects(0, NULL, FALSE, 5, QS_ALLINPUT);
+    if (wait > 0 && qh == qt && !quit_posted) MsgWaitForMultipleObjects(0, NULL, FALSE, 5, QS_ALLINPUT);
     while (PeekMessageA(&m, NULL, 0, 0, PM_REMOVE)) {
         TranslateMessage(&m);
         DispatchMessageA(&m);
     }
     script_poll();
     wave_poll();
-    screen_present();
+    /* show the screen once the game has stopped drawing for a moment: it
+       blits the scene and then its cursor over it; presenting in between
+       made the cursor flash.  A screen that keeps changing is still shown
+       at least every 50 ms. */
+    (void)wait;
+    if (screen_dirty) {
+        extern u32 gdi_last_t;
+        static u32 dirty_since;
+        u32 now = timeGetTime();
+        if (!dirty_since) dirty_since = now;
+        if (now - gdi_last_t >= 6 || now - dirty_since >= 50) { screen_present(); dirty_since = 0; }
+    }
     return !quit_posted;
 }
 
@@ -575,7 +604,7 @@ u32 w16_GetMessagePos(void) { return (u32)(u16)gx | ((u32)(u16)gy << 16); }
 
 u32 w16_GetCursorPos(u32 pt)
 {
-    win_pump(0);
+    win_pump(-1);
     u32 a = FAR2LIN(pt);
     WR16(a, gx); WR16(a + 2, gy);
     { extern int api_log_on; if (api_log_on) rt_log("  cursor %d,%d\n", gx, gy); }

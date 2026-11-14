@@ -5,3 +5,9 @@
 # the child pane's queue, so a click never skipped it.  Any mouse button event
 # the intro loop sees (id 1 = button down) now counts as the skip click.
 9:0cd9 if ((u16)eax == 1 && !(u16)edx) eax = (eax & 0xffff0000u) | 2;
+
+# Cursor animations (5:99da steps the animation of the hotspot cursor): every
+# arrow cursor starts with an empty frame and loops through it, so the cursor
+# kept vanishing for a moment.  Video > Steady cursor (default on) takes that
+# frame out of the hotspot's frame table; the game's own code skips it.
+5:99da rt_cursor_steady(esp);

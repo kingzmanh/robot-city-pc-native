@@ -9,6 +9,7 @@
  */
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
+#include <mmsystem.h>
 #include <stdlib.h>
 #include <string.h>
 #include "rt.h"
@@ -152,6 +153,8 @@ static void fill(Surf *s, int x0, int y0, int x1, int y1, int c)
     for (int y = y0; y < y1; y++) memset(row(s, y) + x0, c, x1 > x0 ? x1 - x0 : 0);
 }
 
+int gdi_last_w, gdi_last_h;   /* size of the last blit to the screen (tests) */
+u32 gdi_last_t;               /* time of the last blit to the screen */
 static void blit(u16 ddc, int xd, int yd, int wd, int hd, u16 sdc, int xs, int ys, int ws, int hs, u32 rop)
 {
     Surf d, s;
@@ -197,7 +200,8 @@ static void blit(u16 ddc, int xd, int yd, int wd, int hd, u16 sdc, int xs, int y
             }
         }
     }
-    if (O(ddc)->screen) screen_dirty = 1;
+    if (O(ddc)->screen) { screen_dirty = 1; gdi_last_w = wd; gdi_last_h = hd; gdi_last_t = timeGetTime();
+        extern u32 rt_api_ret; if (getenv(ENV("BLITLOG"))) rt_log("blit %dx%d at %d,%d from %04x:%04x t %u\n", wd, hd, xd, yd, rt_api_ret >> 16, rt_api_ret & 0xffff, timeGetTime()); }
 }
 
 void screen_present(void)
