@@ -381,6 +381,18 @@ u32 w16_DispatchMessage(u32 msg)
     u32 a = FAR2LIN(msg);
     u32 m = RD16(a + 2), wp = RD16(a + 4), lp = RD32(a + 6);
     if (m == WM_QUIT) return 0;
+    if (getenv(ENV("CLICKDEBUG")) && (m == WM_LBUTTONDOWN || m == WM_LBUTTONUP)) {
+        u32 dg = sel_base[SEL_IDX(g_dgroup)];
+        u16 sel16 = RD16(dg + 0x2016), s18 = RD16(dg + 0x2018);
+        u32 pane = RD32(sel_base[SEL_IDX(sel16)] + 0x197a);
+        u32 hot = RD32(sel_base[SEL_IDX(s18)] + 0x1b24);
+        u32 fl = pane ? RD32(FAR2LIN(pane) + 0x58) : 0;
+        rt_log("click msg %x at %d,%d: pane %08x flags %08x captured hotspot %08x\n", m, gx, gy, pane, fl, hot);
+        if (pane) {
+            u32 pl = FAR2LIN(pane);
+            rt_log("  pane rect %d,%d - %d,%d\n", (s16)RD16(pl + 0x2c), (s16)RD16(pl + 0x2e), (s16)RD16(pl + 0x30), (s16)RD16(pl + 0x32));
+        }
+    }
     return send(m, wp, lp);
 }
 

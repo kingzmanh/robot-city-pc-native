@@ -510,3 +510,20 @@ int main(int argc, char **argv)
     rt_log("game returned from its entry point\n");
     return 0;
 }
+
+/* tools/trace16.txt: registers at listed instructions */
+void rt_trace_at(u32 at)
+{
+    { void rt_trace_event(void); if (at == 0x6d361) rt_trace_event(); }
+    rt_log("@%x:%04x ax=%04x bx=%04x cx=%04x dx=%04x si=%04x di=%04x bp=%04x ds=%04x es=%04x\n", at >> 16, at & 0xffff,
+           cpu.r[0] & 0xffff, cpu.r[3] & 0xffff, cpu.r[1] & 0xffff, cpu.r[2] & 0xffff, cpu.r[6] & 0xffff, cpu.r[7] & 0xffff,
+           cpu.r[5] & 0xffff, cpu.sreg[S_DS], cpu.sreg[S_ES]);
+}
+void rt_trace_event(void)
+{
+    u32 fp = ((cpu.r[R_EDX] & 0xffff) << 16) | (cpu.r[R_EAX] & 0xffff);
+    if (!fp) return;
+    u32 a = FAR2LIN(fp);
+    rt_log("   event %04x:%04x type %u id %u  caller ret %04x:%04x\n", fp >> 16, fp & 0xffff, RD16(a + 0x18), RD16(a + 0x1c),
+           RD16(STK(4)), RD16(STK(2)));
+}

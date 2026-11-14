@@ -316,6 +316,30 @@ def explore(p, entry, known, noreturn_api, collect, f=None):
     return calls
 
 
+# tools/trace16.txt: instruction addresses (seg:off) where registers are logged
+TRACE16 = set()
+_tp16 = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'trace16.txt')
+if os.path.exists(_tp16):
+    for _l in open(_tp16):
+        _l = _l.split('#')[0].strip()
+        if _l:
+            _s, _o = _l.split(':')
+            TRACE16.add((int(_s, 16) << 16) | int(_o, 16))
+
+
+# tools/patch16.txt: "seg:off C statement" - C code run before that instruction
+# (game fixes / enhancements that need a few registers changed)
+PATCH16 = {}
+_pp16 = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'patch16.txt')
+if os.path.exists(_pp16):
+    for _l in open(_pp16):
+        _l = _l.strip()
+        if _l and not _l.startswith('#'):
+            _a, _c = _l.split(None, 1)
+            _s, _o = _a.split(':')
+            PATCH16.setdefault((int(_s, 16) << 16) | int(_o, 16), []).append(_c)
+
+
 class Gen16(Gen):
     def __init__(self, p, funcs, native):
         super().__init__(p, funcs, native, set())
@@ -562,6 +586,10 @@ class Gen16(Gen):
                 ro = nxt & 0xffff
                 L = la.get(a, ALL)
                 cmt = ' /* %x:%04x %s %s */' % (a >> 16, a & 0xffff, m, ins.op_str.replace('*/', '* /'))
+                if a in TRACE16:
+                    out.append('    SYNC_OUT; rt_trace_at(0x%xu);' % a)
+                for pc in PATCH16.get(a, ()):
+                    out.append('    %s /* patch16 */' % pc)
                 if m in JCC:
                     t = target(ins)
                     if m == 'jcxz':

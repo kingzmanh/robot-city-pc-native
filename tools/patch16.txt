@@ -1,0 +1,7 @@
+# seg:off  C statement run before the instruction at seg:off (registers are C locals)
+#
+# Intro (9:07d8 plays :intro:): the loop skips when the event it pops has id 2
+# (button up in the main pane), but during the intro the button-up event goes to
+# the child pane's queue, so a click never skipped it.  Any mouse button event
+# the intro loop sees (id 1 = button down) now counts as the skip click.
+9:0cd9 if ((u16)eax == 1 && !(u16)edx) eax = (eax & 0xffff0000u) | 2;
