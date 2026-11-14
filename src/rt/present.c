@@ -664,16 +664,6 @@ static HMENU build_menu(void)
     AppendMenuW(res, MF_SEPARATOR, 0, NULL);
     AppendMenuW(res, MF_STRING | MF_GRAYED, 0, L"The game's pictures and movies are 640x480: this is the size");
     AppendMenuW(res, MF_STRING | MF_GRAYED, 0, L"the Upscale Filter makes them before they fit the screen");
-    HMENU rend = CreatePopupMenu();
-    for (int s = 1; s <= 4; s++) {
-        wchar_t t[80];
-        swprintf(t, 80, L"%dx%ls", s, s == 1 ? L"  (original)" : s == 4 ? L"  (default)" : L"");
-        AppendMenuW(rend, MF_STRING, ID_RENDER + s, t);
-    }
-    AppendMenuW(rend, MF_SEPARATOR, 0, NULL);
-    AppendMenuW(rend, MF_STRING | MF_GRAYED, 0, L"The 360-degree views are drawn at this many times");
-    AppendMenuW(rend, MF_STRING | MF_GRAYED, 0, L"the original resolution, with smooth filtering");
-    AppendMenuW(video, MF_POPUP, (UINT_PTR)rend, L"&Internal Resolution (panoramas)");
 #if WIDESCREEN_ENABLED
     HMENU widem = CreatePopupMenu();
     AppendMenuW(widem, MF_STRING, ID_WIDE + 1, L"Match the monitor  (default)");
@@ -694,10 +684,6 @@ static HMENU build_menu(void)
     AppendMenuW(video, MF_POPUP, (UINT_PTR)filt, L"Upscale &Filter");
     AppendMenuW(video, MF_STRING, ID_FXAA, L"Anti-aliasing (&FXAA)");
     AppendMenuW(video, MF_POPUP, (UINT_PTR)sharp, L"&Sharpening (contrast adaptive)");
-    AppendMenuW(video, MF_SEPARATOR, 0, NULL);
-    AppendMenuW(video, MF_STRING, ID_MOVIECOLOR, L"&Movies in full colour  (24-bit, off = the game's 16-bit)");
-    AppendMenuW(video, MF_STRING, ID_MOVIEDEBLOCK, L"Movies: smooth compression &blocks");
-    AppendMenuW(video, MF_STRING, ID_MOVIEDEBAND, L"Movies: smooth colour ban&ding");
     for (int k = 1; k <= 3; k++) { wchar_t t[32]; swprintf(t, 32, L"%d x %d", 640 * k, 480 * k); AppendMenuW(winm, MF_STRING, ID_WIN + k, t); }
     AppendMenuW(view, MF_POPUP, (UINT_PTR)winm, L"&Window Size");
     AppendMenuW(view, MF_STRING, ID_FULLSCREEN, L"&Fullscreen\tAlt+Enter");
@@ -743,15 +729,15 @@ static void set_client_size(int w, int h)
 }
 
 static const char *controls_text =
-    "Mouse: the game's own controls (look around, click to act, inventory).\n"
-    "Esc: skip a movie / open the game's menu (save, load, quit).\n\n"
+    "Mouse: the game's own controls (click to move, look and act).\n\n"
     "Alt+Enter: fullscreen / window.\n"
     "The menu bar (Video, View, Help) is shown in window mode.";
 static const char *about_text =
-    "Ring: The Legend of the Nibelungen - PC Native\n\n"
-    "The original 1999 game's own code (ring.exe) recompiled to run\n"
-    "natively on modern Windows, with its own Windows 95 / DirectX layer.\n\n"
-    "Ring (c) 1998-1999 Arxel Tribe / Cryo Interactive.";
+    "Isaac Asimov's Robot City - PC Native\n\n"
+    "The original 1995 game's own 16-bit code (ROBOTCTY.EXE) recompiled\n"
+    "to run natively on modern 64-bit Windows, with its own\n"
+    "Windows 3.1 / WinG layer - no emulator.\n\n"
+    "Robot City (c) 1995 Byron Preiss Multimedia.";
 
 /* returns 1 if the command was ours */
 int present_menu_command(int id)
