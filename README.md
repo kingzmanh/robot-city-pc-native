@@ -36,10 +36,20 @@ repository: you need your own two Robot City CDs.
 - The 2-minute introduction can be skipped with a click (the original
   ignored the click).
 
+## Installing
+
+Run **Robot City PC Setup.exe** and point it at your two CDs. Discs in a
+drive, ISO / BIN+CUE images, or folders with the disc contents all work. Setup
+copies both discs to the hard disk (about 920 MB), so after installing the
+game never asks for a CD again. It puts your CD's icon on the game and adds
+Start menu / desktop shortcuts and an uninstaller.
+
+Silent install: `"Robot City PC Setup.exe" /silent /cd <disc 1> /cd2 <disc 2>
+/dir <folder> [/nodesktop] [/nostartmenu]`.
+
 ## Status
 
 Playable from the introduction through the first locations; under testing.
-There is no installer yet: see *Building* below.
 
 ## Building
 

@@ -10,7 +10,7 @@
 #define GAME_DISCS 2
 #define GAME_DISC_FILES { \
     { "RCID.000", "RC\\ROBOTCTY.EXE", NULL }, \
-    { "RCID.001", "RC\\WITNESS", NULL } }
+    { "RCID.001", "RC\\WITNESS\\AUDIO\\SAMPLES\\00W01010.MPS", NULL } }
 #define GAME_ICON_ICO "I_COMP\\RC.ICO"
 #define GAME_ICON_LBM NULL
 /* the 16-bit game program and RCP.DAT (CD drive letter) live in C:\RC like setup left them */

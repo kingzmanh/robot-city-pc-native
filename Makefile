@@ -46,3 +46,24 @@ clean:
 	rm -rf $(B)/gen $(B)/rt $(EXE)
 
 .PHONY: all gen clean
+
+# ---- release: game exe without the game's icon (setup puts it in from the
+# user's CD) and the setup program with that exe inside ----
+release: build/release/game.exe build/setup.exe
+	cp build/setup.exe "Robot City PC Setup.exe"
+
+build/release/game.exe: $(OBJS)
+	@mkdir -p build/release
+	$(CC) -mwindows -o $@ $^ $(LIBS)
+	strip $@
+
+SETUP_SRCS := $(wildcard installer/*.c)
+SETUP_LIBS := -lcomctl32 -lcomdlg32 -lole32 -luuid -lshell32 -ladvapi32
+
+$(B)/setup_res.o: installer/setup.rc installer/setup.manifest build/release/game.exe
+	windres -I installer $< -o $@
+
+build/setup.exe: $(SETUP_SRCS) installer/setup.h installer/install.h src/rt/game.h $(B)/setup_res.o
+	$(CC) -O2 -Wall -Wno-format-truncation -mwindows -static -Isrc/rt -o $@ $(SETUP_SRCS) $(B)/setup_res.o $(SETUP_LIBS)
+
+.PHONY: release
