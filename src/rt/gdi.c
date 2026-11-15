@@ -154,6 +154,9 @@ static void fill(Surf *s, int x0, int y0, int x1, int y1, int c)
 }
 
 int gdi_last_w, gdi_last_h;   /* size of the last blit to the screen (tests) */
+u32 gdi_cursor_t;             /* when the game last drew its cursor */
+int gdi_cursor_pending;       /* the game area was redrawn over the cursor, cursor not back yet */
+u32 gdi_pending_t;
 u32 gdi_last_t;               /* time of the last blit to the screen */
 static void blit(u16 ddc, int xd, int yd, int wd, int hd, u16 sdc, int xs, int ys, int ws, int hs, u32 rop)
 {
@@ -200,8 +203,17 @@ static void blit(u16 ddc, int xd, int yd, int wd, int hd, u16 sdc, int xs, int y
             }
         }
     }
-    if (O(ddc)->screen) { screen_dirty = 1; gdi_last_w = wd; gdi_last_h = hd; gdi_last_t = timeGetTime();
-        extern u32 rt_api_ret; if (getenv(ENV("BLITLOG"))) rt_log("blit %dx%d at %d,%d from %04x:%04x t %u\n", wd, hd, xd, yd, rt_api_ret >> 16, rt_api_ret & 0xffff, timeGetTime()); }
+    if (O(ddc)->screen) {
+        u32 now = timeGetTime();
+        screen_dirty = 1; gdi_last_w = wd; gdi_last_h = hd; gdi_last_t = now;
+        extern u32 rt_api_ret;
+        if (getenv(ENV("BLITLOG"))) rt_log("blit %dx%d at %d,%d from %04x:%04x t %u\n", wd, hd, xd, yd, rt_api_ret >> 16, rt_api_ret & 0xffff, now);
+        /* the game's cursor: drawn by WinGStretchBlt at 5:9964.  A big redraw
+           of the game area wipes it and the game draws it again 10-30 ms
+           later - the screen is not shown in between (cursor flicker) */
+        if (rt_api_ret == 0x002f9968u) { gdi_cursor_t = now; gdi_cursor_pending = 0; }
+        else if (wd * hd >= 256 * 128 && now - gdi_cursor_t < 1000) { gdi_cursor_pending = 1; gdi_pending_t = now; }
+    }
 }
 
 void screen_present(void)

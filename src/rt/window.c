@@ -37,6 +37,19 @@ static int nclasses;
 static u32 g_proc;
 static int g_w = 640, g_h = 480, g_x, g_y;
 static int invalid;           /* the window needs WM_PAINT */
+static int inv_l, inv_t, inv_r, inv_b;   /* the update region (its bounding box) */
+
+static void inv_add(int l, int t, int r, int b)
+{
+    if (l < 0) l = 0; if (t < 0) t = 0; if (r > 640) r = 640; if (b > 480) b = 480;
+    if (r <= l || b <= t) return;
+    if (!invalid) { inv_l = l; inv_t = t; inv_r = r; inv_b = b; }
+    else {
+        if (l < inv_l) inv_l = l; if (t < inv_t) inv_t = t;
+        if (r > inv_r) inv_r = r; if (b > inv_b) inv_b = b;
+    }
+    invalid = 1;
+}
 static int created, destroyed;
 
 /* ---------------- message queue ---------------- */
@@ -339,8 +352,16 @@ void present_frame(const u8 *pix, int pitch, const u32 *pal)
             u32 c = frame[i];
             if (((c >> 16) & 255) > 120 && ((c >> 8) & 255) < 40 && (c & 255) > 50 && ((c >> 16) & 255) > (c & 255)) n++;
         }
+        /* white pixels (the arrow cursors) within 24 px of the mouse */
+        int wn = 0;
+        for (int y = gy - 24; y <= gy + 24; y++)
+            for (int x = gx - 24; x <= gx + 24; x++) {
+                if (x < 0 || y < 0 || x >= 640 || y >= 480) continue;
+                u32 c = frame[y * 640 + x];
+                if ((c & 255) > 235 && ((c >> 8) & 255) > 235 && ((c >> 16) & 255) > 235) wn++;
+            }
         extern int gdi_last_w, gdi_last_h;
-        rt_log("frame %u cursorpx %d last %dx%d\n", t, n, gdi_last_w, gdi_last_h);
+        rt_log("frame %u cursorpx %d white %d at %d,%d last %dx%d\n", t, n, wn, gx, gy, gdi_last_w, gdi_last_h);
         int f0, f1;   /* RC_FRAMEDUMP=from,to (ms): every presented frame -> shots */
         if (getenv(ENV("FRAMEDUMP")) && sscanf(getenv(ENV("FRAMEDUMP")), "%d,%d", &f0, &f1) == 2 && (int)t >= f0 && (int)t <= f1)
             save_shot(t);
@@ -502,7 +523,9 @@ int win_pump(int wait)
         static u32 dirty_since;
         u32 now = timeGetTime();
         if (!dirty_since) dirty_since = now;
-        if (now - gdi_last_t >= 6 || now - dirty_since >= 50) { screen_present(); dirty_since = 0; }
+        extern int gdi_cursor_pending; extern u32 gdi_pending_t;
+        int wait_cursor = gdi_cursor_pending && now - gdi_pending_t < 80;
+        if (!wait_cursor && (now - gdi_last_t >= 6 || now - dirty_since >= 50)) { screen_present(); dirty_since = 0; }
     }
     return !quit_posted;
 }
@@ -663,7 +686,7 @@ u32 w16_ShowWindow(u16 h, u16 cmd)
     send(WM_ACTIVATEAPP, 1, 0);
     send(WM_ACTIVATE, 1, 0);
     send(WM_SETFOCUS, 0, 0);
-    invalid = 1;
+    inv_add(0, 0, 640, 480);
     return 0;
 }
 
@@ -674,8 +697,26 @@ u32 w16_UpdateWindow(u16 h)
     return 0;
 }
 
-u32 w16_InvalidateRect(u16 h, u32 r, u16 erase) { (void)h; (void)r; (void)erase; invalid = 1; return 0; }
-u32 w16_ValidateRect(u16 h, u32 r) { (void)h; (void)r; invalid = 0; return 0; }
+u32 w16_InvalidateRect(u16 h, u32 r, u16 erase)
+{
+    (void)h; (void)erase;
+    extern u32 rt_api_ret;
+    if (getenv(ENV("BLITLOG"))) rt_log("InvalidateRect %08x from %04x:%04x t %u\n", r, rt_api_ret >> 16, rt_api_ret & 0xffff, timeGetTime());
+    if (r) {
+        u32 a = FAR2LIN(r);
+        inv_add((s16)RD16(a), (s16)RD16(a + 2), (s16)RD16(a + 4), (s16)RD16(a + 6));
+    } else inv_add(0, 0, 640, 480);
+    return 0;
+}
+u32 w16_ValidateRect(u16 h, u32 r)
+{
+    (void)h;
+    if (!r) { invalid = 0; return 0; }
+    u32 a = FAR2LIN(r);
+    /* a rectangle covering the whole update region validates it */
+    if ((s16)RD16(a) <= inv_l && (s16)RD16(a + 2) <= inv_t && (s16)RD16(a + 4) >= inv_r && (s16)RD16(a + 6) >= inv_b) invalid = 0;
+    return 0;
+}
 
 u16 gdi_window_dc(void);
 u32 w16_BeginPaint(u16 h, u32 ps)
@@ -686,7 +727,8 @@ u32 w16_BeginPaint(u16 h, u32 ps)
     memset(MEM + a, 0, 32);
     WR16(a, dc);
     WR16(a + 2, 0);
-    WR16(a + 4, 0); WR16(a + 6, 0); WR16(a + 8, 640); WR16(a + 10, 480);
+    if (invalid) { WR16(a + 4, inv_l); WR16(a + 6, inv_t); WR16(a + 8, inv_r); WR16(a + 10, inv_b); }
+    else { WR16(a + 4, 0); WR16(a + 6, 0); WR16(a + 8, 0); WR16(a + 10, 0); }
     invalid = 0;
     return dc;
 }
