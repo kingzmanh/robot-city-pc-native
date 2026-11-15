@@ -47,10 +47,6 @@ Start menu / desktop shortcuts and an uninstaller.
 Silent install: `"Robot City PC Setup.exe" /silent /cd <disc 1> /cd2 <disc 2>
 /dir <folder> [/nodesktop] [/nostartmenu]`.
 
-## Status
-
-Playable from the introduction through the first locations; under testing.
-
 ## Building
 
 Requirements: Windows 10/11 x64, [MSYS2](https://www.msys2.org/) with the
