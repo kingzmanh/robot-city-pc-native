@@ -25,10 +25,21 @@ static u32 mute_clock;            /* muted: when the device finishes everything 
 static u32 bytes_done;            /* muted position */
 static u32 open_time;
 
-u32 w16_timeGetTime(void) { return timeGetTime(); }
+/* busy-wait loops (animations timed with timeGetTime / the sound position)
+   never pump messages: show finished frames from here too */
+void rt_idle_tick(void)
+{
+    static u32 last;
+    u32 t = timeGetTime();
+    if (t - last < 4) return;
+    last = t;
+    win_pump(-1);
+}
+
+u32 w16_timeGetTime(void) { rt_idle_tick(); return timeGetTime(); }
 u32 w16_waveOutGetNumDevs(void) { return 1; }
 u32 w16_waveOutGetID(u16 h, u32 id) { (void)h; if (id) WR16(FAR2LIN(id), 0); return 0; }
-u32 w16_waveOutSetVolume(u16 dev, u32 v) { (void)dev; if (open_ && hwo && !mute) waveOutSetVolume(hwo, v); return 0; }
+u32 w16_waveOutSetVolume(u16 dev, u32 v) { (void)dev; if (open_ && hwo && !mute && !getenv(ENV("SILENTDEV"))) waveOutSetVolume(hwo, v); return 0; }
 
 u32 w16_waveOutGetDevCaps(u16 dev, u32 caps, u16 size)
 {
@@ -62,6 +73,7 @@ u32 w16_waveOutOpen(u32 phwo, u16 dev, u32 fmt, u32 callback, u32 inst, u32 flag
         rt_log("waveOutOpen: host device failed, running muted\n");
         mute = 1;
     }
+    if (!mute && getenv(ENV("SILENTDEV"))) waveOutSetVolume(hwo, 0);   /* tests: real device timing, no sound */
     avg_bps = wf.nAvgBytesPerSec ? wf.nAvgBytesPerSec : 22050;
     open_ = 1;
     cb = callback; cb_inst = inst; cb_flags = flags & 0x70000;
@@ -256,6 +268,7 @@ u32 w16_waveOutClose(u16 h)
 
 u32 w16_waveOutGetPosition(u16 h, u32 mmt, u16 size)
 {
+    rt_idle_tick();
     (void)h; (void)size;
     u32 a = FAR2LIN(mmt);
     u32 bytes;

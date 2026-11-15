@@ -11,3 +11,4 @@
 # kept vanishing for a moment.  Video > Steady cursor (default on) takes that
 # frame out of the hotspot's frame table; the game's own code skips it.
 5:99da rt_cursor_steady(esp);
+5:7018 rt_text_probe(esp);

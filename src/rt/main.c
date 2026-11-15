@@ -572,3 +572,18 @@ void rt_cursor_steady(u32 sp)
     for (u32 i = 0; i < count; i++)
         if ((int)i != last) WR8(t + i, 0);
 }
+
+/* probe (RC_TEXTDEBUG): 5:7018 text box print(textbox far, string far, flags) */
+void rt_text_probe(u32 sp)
+{
+    if (!getenv(ENV("TEXTDEBUG"))) return;
+    u32 ss = cpu.sbase[S_SS];
+    u32 tb = RD16(ss + (u16)(sp + 4)) | ((u32)RD16(ss + (u16)(sp + 6)) << 16);
+    u32 st = RD16(ss + (u16)(sp + 8)) | ((u32)RD16(ss + (u16)(sp + 10)) << 16);
+    if (!tb || !st) return;
+    const char *s = (const char *)PTR(FAR2LIN(st));
+    u32 t = FAR2LIN(tb);
+    rt_log("text tb %08x \"%.40s\" w:", tb, s);
+    for (int i = 0; i < 0x40; i += 2) rt_log(" %d", (s16)RD16(t + i));
+    rt_log("\n");
+}

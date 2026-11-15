@@ -190,6 +190,11 @@ u32 gdi_last_t;               /* time of the last blit to the screen */
 static void blit(u16 ddc, int xd, int yd, int wd, int hd, u16 sdc, int xs, int ys, int ws, int hs, u32 rop)
 {
     Surf d, s;
+    if (getenv(ENV("BLITLOG")) && O(ddc) && !O(ddc)->screen) {
+        extern u32 rt_api_ret;
+        rt_log("offblit %dx%d to dc %04x at %d,%d from dc %04x src %d,%d from %04x:%04x t %u\n", wd, hd, ddc, xd, yd, sdc, xs, ys,
+               rt_api_ret >> 16, rt_api_ret & 0xffff, timeGetTime());
+    }
     if (!surf_of(ddc, &d)) return;
     if (rop == 0x00000042 || rop == 0x00ff0062 || rop == 0x00f00021 || !sdc) {
         int c = rop == 0x00ff0062 ? 255 : 0;

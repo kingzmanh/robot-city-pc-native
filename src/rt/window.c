@@ -124,6 +124,9 @@ static void script_init(void)
 
 static void save_shot(u32 t);
 static int have_frame;
+int dlg_find_button(int n, int *x, int *y);
+int dlg_option_at(int x, int y);
+static void press_for_player(int bx, int by, int with_up);
 static void script_poll(void)
 {
     u32 t = win_time();
@@ -136,13 +139,28 @@ static void script_poll(void)
     while (have_frame && shot_next < nshots && t >= shots[shot_next]) { save_shot(shots[shot_next]); shot_next++; }
     while (script_next < nscript && t >= script[script_next].t) {
         Script *e = &script[script_next++];
-        if (e->kind == 0) {
+        int dbx, dby, dn;
+        if (e->kind == 0 && (dn = dlg_option_at(e->x, e->y)) && dlg_find_button(dn, &dbx, &dby)) {
+            rt_log("script click %d,%d at %u = dialogue option %d\n", e->x, e->y, t, dn);
+            press_for_player(dbx, dby, 1);
+        } else if (e->kind == 1 && ((e->vk >= '1' && e->vk <= '9') || (e->vk >= 0x61 && e->vk <= 0x69)) &&
+                   dlg_find_button(e->vk >= 0x61 ? (int)e->vk - 0x60 : (int)e->vk - '0', &dbx, &dby)) {
+            rt_log("script key %u at %u = dialogue option\n", e->vk, t);
+            press_for_player(dbx, dby, 1);
+        } else if (e->kind == 0) {
             gx = e->x; gy = e->y;
             u32 lp = (u32)(u16)e->x | ((u32)(u16)e->y << 16);
             msgq_post(GHWND, WM_MOUSEMOVE, 0, lp);
             msgq_post(GHWND, WM_LBUTTONDOWN, MK_LBUTTON, lp);
-            msgq_post(GHWND, WM_LBUTTONUP, 0, lp);
+            /* the button comes up 150 ms later, like a real click */
+            if (nscript < 256) {
+                int k = nscript++;
+                while (k > script_next && script[k - 1].t > t + 150) { script[k] = script[k - 1]; k--; }
+                script[k].t = t + 150; script[k].kind = 2; script[k].x = e->x; script[k].y = e->y; script[k].vk = 0;
+            }
             rt_log("script click %d,%d at %u\n", e->x, e->y, t);
+        } else if (e->kind == 2) {
+            msgq_post(GHWND, WM_LBUTTONUP, 0, (u32)(u16)e->x | ((u32)(u16)e->y << 16));
         } else if (e->kind == 3) {
             gx = e->x; gy = e->y;
             msgq_post(GHWND, WM_MOUSEMOVE, 0, (u32)(u16)e->x | ((u32)(u16)e->y << 16));
@@ -161,6 +179,32 @@ static void script_poll(void)
 
 static u32 *frame;
 static int frames;
+
+/* dialogue menus (dialog_input.c): a click on an option's text or its
+   number key presses the option's button - the game reads the cursor
+   position while it handles the press, so it sees the button's position */
+int dlg_find_button(int n, int *x, int *y);
+int dlg_option_at(int x, int y);
+static int ovr_on, ovr_x, ovr_y, ovr_up_pending;
+static u32 ovr_until;
+
+static void post_at(u32 msg, u32 wp, int x, int y)
+{
+    int sx = gx, sy = gy;
+    gx = x; gy = y;
+    msgq_post(GHWND, msg, wp, (u32)(u16)x | ((u32)(u16)y << 16));
+    gx = sx; gy = sy;
+}
+
+static void press_for_player(int bx, int by, int with_up)
+{
+    ovr_on = 1; ovr_x = bx; ovr_y = by;
+    ovr_until = now_ms() + (with_up ? 400 : 10000);
+    post_at(WM_MOUSEMOVE, 0, bx, by);
+    post_at(WM_LBUTTONDOWN, MK_LBUTTON, bx, by);
+    if (with_up) post_at(WM_LBUTTONUP, 0, bx, by);
+    rt_log("dialogue: pressed the option button at %d,%d\n", bx, by);
+}
 
 /* Video > Zoom to the game area: the game draws only into this box of its
    640x480 screen (a white frame line on black around it) */
@@ -446,12 +490,28 @@ static LRESULT CALLBACK host_proc(HWND h, UINT m, WPARAM wp, LPARAM lp)
     case WM_COMMAND: if (present_menu_command(LOWORD(wp))) { InvalidateRect(h, NULL, FALSE); return 0; } break;
     case WM_KEYDOWN:
         if (wp == VK_F9) { present_menu_command(1111); InvalidateRect(h, NULL, FALSE); return 0; }   /* Widescreen fill on / off */
+        {   /* number keys (top row / keypad) choose a dialogue option */
+            int n = (wp >= '1' && wp <= '9') ? (int)wp - '0' : (wp >= VK_NUMPAD1 && wp <= VK_NUMPAD9) ? (int)wp - VK_NUMPAD0 : 0;
+            int bx, by;
+            if (n && !(lp & (1 << 30)) && dlg_find_button(n, &bx, &by)) { press_for_player(bx, by, 1); return 0; }
+        }
         keys[wp & 0xff] = 0x80; msgq_post(GHWND, WM_KEYDOWN, (u32)wp, (u32)lp); return 0;
     case WM_KEYUP: keys[wp & 0xff] = 0; msgq_post(GHWND, WM_KEYUP, (u32)wp, (u32)lp); return 0;
     case WM_CHAR: msgq_post(GHWND, WM_CHAR, (u32)wp, (u32)lp); return 0;
     case WM_MOUSEMOVE: case WM_LBUTTONDOWN: case WM_LBUTTONUP: case WM_RBUTTONDOWN: case WM_RBUTTONUP:
     case WM_LBUTTONDBLCLK: case WM_RBUTTONDBLCLK:
         map_mouse(lp);
+        if (m == WM_LBUTTONDOWN) {
+            int o = dlg_option_at(gx, gy), bx, by;
+            if (o && dlg_find_button(o, &bx, &by)) { SetCapture(h); press_for_player(bx, by, 0); ovr_up_pending = 1; return 0; }
+        }
+        if (m == WM_LBUTTONUP && ovr_up_pending) {
+            ReleaseCapture();
+            ovr_up_pending = 0;
+            post_at(WM_LBUTTONUP, 0, ovr_x, ovr_y);
+            ovr_until = now_ms() + 400;
+            return 0;
+        }
         if (m == WM_LBUTTONDOWN || m == WM_RBUTTONDOWN) SetCapture(h);
         if (m == WM_LBUTTONUP || m == WM_RBUTTONUP) ReleaseCapture();
         msgq_post(GHWND, m, mk_keys(wp), (u32)(u16)gx | ((u32)(u16)gy << 16));
@@ -596,6 +656,15 @@ u32 w16_DispatchMessage(u32 msg)
         if (pane) {
             u32 pl = FAR2LIN(pane);
             rt_log("  pane rect %d,%d - %d,%d\n", (s16)RD16(pl + 0x2c), (s16)RD16(pl + 0x2e), (s16)RD16(pl + 0x30), (s16)RD16(pl + 0x32));
+            /* its hotspots: list from pane+0x18, next = first dword */
+            u32 hp = RD32(FAR2LIN(RD32(pl + 0x18)));
+            for (int i = 0; hp && i < 60; i++) {
+                u32 h = FAR2LIN(hp);
+                rt_log("  hs %08x flags %08x click %d,%d-%d,%d cur %d,%d-%d,%d id %u\n", hp, RD32(h + 0x30),
+                       (s16)RD16(h + 0x1c), (s16)RD16(h + 0x1e), (s16)RD16(h + 0x20), (s16)RD16(h + 0x22),
+                       (s16)RD16(h + 0x24), (s16)RD16(h + 0x26), (s16)RD16(h + 0x28), (s16)RD16(h + 0x2a), RD16(h + 0x38));
+                hp = RD32(h);
+            }
         }
     }
     return send(m, wp, lp);
@@ -621,14 +690,29 @@ u32 w16_DefWindowProc(u16 h, u16 msg, u16 wp, u32 lp)
 
 u32 w16_PostQuitMessage(u16 code) { msgq_quit(code); return 0; }
 u32 w16_InitApp(u16 h) { (void)h; return 1; }
-u32 w16_GetTickCount(void) { return now_ms(); }
+u32 w16_GetTickCount(void) { void rt_idle_tick(void); rt_idle_tick(); return now_ms(); }
 u32 w16_GetMessageTime(void) { return now_ms(); }
 u32 w16_GetMessagePos(void) { return (u32)(u16)gx | ((u32)(u16)gy << 16); }
 
 u32 w16_GetCursorPos(u32 pt)
 {
     win_pump(-1);
+    if (getenv(ENV("LOOPDEBUG"))) {   /* who polls the cursor: two frames up the BP chain */
+        static u32 n;
+        if ((n++ & 4095) == 0) {
+            u32 ss = cpu.sbase[S_SS], bp = (u16)cpu.r[R_EBP];
+            u32 r1 = RD16(ss + (u16)(bp + 2)) | ((u32)RD16(ss + (u16)(bp + 4)) << 16);
+            u32 bp2 = RD16(ss + bp);
+            u32 r2 = RD16(ss + (u16)(bp2 + 2)) | ((u32)RD16(ss + (u16)(bp2 + 4)) << 16);
+            u32 bp3 = RD16(ss + bp2);
+            u32 r3 = RD16(ss + (u16)(bp3 + 2)) | ((u32)RD16(ss + (u16)(bp3 + 4)) << 16);
+            extern u32 rt_api_ret;
+            rt_log("cursorpoll %u: api ret %08x  frames %08x %08x %08x\n", now_ms(), rt_api_ret, r1, r2, r3);
+        }
+    }
     u32 a = FAR2LIN(pt);
+    if (ovr_on && (s32)(now_ms() - ovr_until) < 0) { WR16(a, ovr_x); WR16(a + 2, ovr_y); return 1; }
+    ovr_on = 0;
     WR16(a, gx); WR16(a + 2, gy);
     { extern int api_log_on; if (api_log_on) rt_log("  cursor %d,%d\n", gx, gy); }
     return 1;

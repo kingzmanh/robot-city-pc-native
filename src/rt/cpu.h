@@ -191,3 +191,4 @@ void rt_rep_stos16(int sz);
 typedef struct { const char *mod; int ord; const char *name; void (*fn)(void); } ApiEnt;
 void rt_trace_at(u32 at);
 void rt_cursor_steady(u32 sp);
+void rt_text_probe(u32 sp);
