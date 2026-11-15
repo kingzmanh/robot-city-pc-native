@@ -723,7 +723,8 @@ u32 w16_BeginPaint(u16 h, u32 ps)
 {
     (void)h;
     u32 a = FAR2LIN(ps);
-    u16 dc = gdi_window_dc();
+    u16 gdi_paint_dc(int l, int t, int r, int b);
+    u16 dc = invalid ? gdi_paint_dc(inv_l, inv_t, inv_r, inv_b) : gdi_paint_dc(0, 0, 0, 0);
     memset(MEM + a, 0, 32);
     WR16(a, dc);
     WR16(a + 2, 0);

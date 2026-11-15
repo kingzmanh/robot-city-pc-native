@@ -23,6 +23,7 @@ typedef struct {
     int kind;
     /* DC */
     int screen;              /* the window DC */
+    int clip, cl, ct, cr, cb; /* BeginPaint's DC: drawing is clipped to the update region */
     u16 bmp, pal, brush, pen, rgn_unused;
     /* bitmap */
     int w, h, stride, topdown;
@@ -114,18 +115,46 @@ u16 gdi_window_dc(void)
     return win_dc;
 }
 
+/* BeginPaint: a window DC clipped to the update region - the game's paint
+   handler blits its whole picture and Windows only lets the dirty part through */
+static u16 paint_dc;
+u16 gdi_paint_dc(int l, int t, int r, int b)
+{
+    gdi_window_dc();
+    if (!paint_dc) {
+        paint_dc = new_obj(O_DC);
+        GObj *d = O(paint_dc);
+        d->screen = 1;
+        d->pal = O(win_dc)->pal;
+        d->brush = stock[0];
+        d->pen = stock[7];
+    }
+    GObj *d = O(paint_dc);
+    d->pal = O(win_dc)->pal;
+    d->clip = 1; d->cl = l; d->ct = t; d->cr = r; d->cb = b;
+    return paint_dc;
+}
+
 /* ---------------- pixels ---------------- */
-typedef struct { u8 *base; int w, h, stride; int topdown; } Surf;
+typedef struct { u8 *base; int w, h, stride; int topdown; int x0, y0, x1, y1; } Surf;   /* x0..x1, y0..y1: drawable area */
 
 static int surf_of(u16 dc, Surf *s)
 {
     GObj *d = O(dc);
     if (!d || d->kind != O_DC) return 0;
-    if (d->screen) { s->base = screen8; s->w = 640; s->h = 480; s->stride = 640; s->topdown = 1; return 1; }
-    GObj *b = O(d->bmp);
-    if (!b || b->kind != O_BMP) return 0;
-    s->base = b->host ? b->host : (u8 *)PTR(b->lin);
-    s->w = b->w; s->h = b->h; s->stride = b->stride; s->topdown = b->topdown;
+    if (d->screen) {
+        s->base = screen8; s->w = 640; s->h = 480; s->stride = 640; s->topdown = 1;
+    } else {
+        GObj *b = O(d->bmp);
+        if (!b || b->kind != O_BMP) return 0;
+        s->base = b->host ? b->host : (u8 *)PTR(b->lin);
+        s->w = b->w; s->h = b->h; s->stride = b->stride; s->topdown = b->topdown;
+    }
+    s->x0 = 0; s->y0 = 0; s->x1 = s->w; s->y1 = s->h;
+    if (d->clip) {
+        if (d->cl > s->x0) s->x0 = d->cl; if (d->ct > s->y0) s->y0 = d->ct;
+        if (d->cr < s->x1) s->x1 = d->cr; if (d->cb < s->y1) s->y1 = d->cb;
+    }
     return 1;
 }
 
@@ -148,8 +177,8 @@ static int nearest(u32 rgb, u16 dc)
 
 static void fill(Surf *s, int x0, int y0, int x1, int y1, int c)
 {
-    if (x0 < 0) x0 = 0; if (y0 < 0) y0 = 0;
-    if (x1 > s->w) x1 = s->w; if (y1 > s->h) y1 = s->h;
+    if (x0 < s->x0) x0 = s->x0; if (y0 < s->y0) y0 = s->y0;
+    if (x1 > s->x1) x1 = s->x1; if (y1 > s->y1) y1 = s->y1;
     for (int y = y0; y < y1; y++) memset(row(s, y) + x0, c, x1 > x0 ? x1 - x0 : 0);
 }
 
@@ -176,12 +205,12 @@ static void blit(u16 ddc, int xd, int yd, int wd, int hd, u16 sdc, int xs, int y
     }
     if (wd == ws && hd == hs) {
         /* clip */
-        if (xd < 0) { xs -= xd; wd += xd; xd = 0; }
-        if (yd < 0) { ys -= yd; hd += yd; yd = 0; }
+        if (xd < d.x0) { xs += d.x0 - xd; wd -= d.x0 - xd; xd = d.x0; }
+        if (yd < d.y0) { ys += d.y0 - yd; hd -= d.y0 - yd; yd = d.y0; }
         if (xs < 0) { xd -= xs; wd += xs; xs = 0; }
         if (ys < 0) { yd -= ys; hd += ys; ys = 0; }
-        if (xd + wd > d.w) wd = d.w - xd;
-        if (yd + hd > d.h) hd = d.h - yd;
+        if (xd + wd > d.x1) wd = d.x1 - xd;
+        if (yd + hd > d.y1) hd = d.y1 - yd;
         if (xs + wd > s.w) wd = s.w - xs;
         if (ys + hd > s.h) hd = s.h - ys;
         if (wd <= 0 || hd <= 0) return;
@@ -190,13 +219,13 @@ static void blit(u16 ddc, int xd, int yd, int wd, int hd, u16 sdc, int xs, int y
         if (wd <= 0 || hd <= 0 || ws == 0 || hs == 0) return;
         for (int y = 0; y < hd; y++) {
             int dy = yd + y;
-            if (dy < 0 || dy >= d.h) continue;
+            if (dy < d.y0 || dy >= d.y1) continue;
             int sy = ys + (int)((long long)y * hs / hd);
             if (sy < 0 || sy >= s.h) continue;
             u8 *dr = row(&d, dy), *sr = row(&s, sy);
             for (int x = 0; x < wd; x++) {
                 int dx = xd + x;
-                if (dx < 0 || dx >= d.w) continue;
+                if (dx < d.x0 || dx >= d.x1) continue;
                 int sx = xs + (int)((long long)x * ws / wd);
                 if (sx < 0 || sx >= s.w) continue;
                 dr[dx] = sr[sx];

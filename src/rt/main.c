@@ -562,9 +562,13 @@ void rt_cursor_steady(u32 sp)
     u32 tp = RD32(h + 0x1c);
     if (count < 2 || count == 255 || !tp) return;
     u32 t = FAR2LIN(tp);
-    if (!RD8(t)) return;
-    /* the arrow cursors' frame 0 is empty; the hand's is a full hand - skipping it
-       there only shortens its animation by one frame */
-    for (u32 i = 1; i < count; i++)
-        if (RD8(t + i)) { WR8(t, 0); return; }   /* another frame stays */
+    /* the cursors grow from an empty frame to their full shape and loop
+       (a pulse that reads as flicker): keep only the last, fully drawn frame
+       enabled - the game's own frame-skip logic then shows just that one */
+    int last = -1, n = 0;
+    for (u32 i = 0; i < count; i++)
+        if (RD8(t + i)) { last = (int)i; n++; }
+    if (n <= 1) return;
+    for (u32 i = 0; i < count; i++)
+        if ((int)i != last) WR8(t + i, 0);
 }
